@@ -457,10 +457,10 @@
 };
 
 /*
- * These inherited MT8192 multimedia, camera, codec, SMI and IOMMU blocks
- * either request removed MT8192 power-domain indices or depend on MT8192
- * clock-provider data. None has verified MT6873 resources yet, so keep them
- * out of the live platform-device population until their MT6873 port is
+ * These inherited MT8192 multimedia, camera, codec, IOMMU and unrelated LARB
+ * blocks either request removed MT8192 power-domain indices or depend on
+ * MT8192 clock-provider data. None has verified MT6873 resources yet, so keep
+ * them out of the live platform-device population until their MT6873 port is
  * reviewed. This also prevents deferred-probe timeouts from masking real
  * bring-up failures.
  */
@@ -478,9 +478,39 @@
 	power-domains = <&spm ATOM_MT6873_POWER_DOMAIN_DIS>;
 	status = "okay";
 };
-&smi_common { status = "disabled"; };
-&larb0 { status = "disabled"; };
-&larb1 { status = "disabled"; };
+
+/*
+ * Stage C0 probes only the reviewed MT6873 SMI common and display LARBs. No
+ * IOMMU master or traffic-bearing display consumer is enabled, so this does
+ * not exercise OVL/RDMA, address translation or pixel data.
+ */
+&smi_common {
+	compatible = "mediatek,mt6873-smi-common";
+	clocks = <&mmsys ATOM_MT6873_CLK_MM_SMI_COMMON>,
+		 <&mmsys ATOM_MT6873_CLK_MM_SMI_INFRA>,
+		 <&mmsys ATOM_MT6873_CLK_MM_SMI_GALS>,
+		 <&mmsys ATOM_MT6873_CLK_MM_SMI_GALS>;
+	clock-names = "apb", "smi", "gals0", "gals1";
+	power-domains = <&spm ATOM_MT6873_POWER_DOMAIN_DIS>;
+	status = "okay";
+};
+
+&larb0 {
+	compatible = "mediatek,mt6873-smi-larb";
+	clocks = <&clk26m>, <&clk26m>;
+	clock-names = "apb", "smi";
+	power-domains = <&spm ATOM_MT6873_POWER_DOMAIN_DIS>;
+	status = "okay";
+};
+
+&larb1 {
+	compatible = "mediatek,mt6873-smi-larb";
+	clocks = <&clk26m>, <&clk26m>;
+	clock-names = "apb", "smi";
+	power-domains = <&spm ATOM_MT6873_POWER_DOMAIN_DIS>;
+	status = "okay";
+};
+
 &ovl0 { status = "disabled"; };
 &ovl_2l0 { status = "disabled"; };
 &rdma0 { status = "disabled"; };

@@ -22,6 +22,8 @@ The patches apply in numeric order to a clean Linux `v6.18.59` tree.
 0029          MT6873 DSI host data
 0030          panel-provided MT6873 DSI HS rate
 0031          Samsung S6E8FC01 panel driver and binding
+0032          MT6873 SMI common/LARB bindings
+0033          MT6873 SMI common/LARB provider data
 ```
 
 Patches are evidence-backed pieces of an in-progress port, not a claim that

@@ -69,6 +69,8 @@ jobs:
           SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/display/panel/samsung,s6e8fc01.yaml"
           SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/i2c/i2c-mt65xx.yaml"
           SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/mailbox/mediatek,gce-mailbox.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/memory-controllers/mediatek,smi-common.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/memory-controllers/mediatek,smi-larb.yaml"
           SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/mfd/mediatek,mt6360.yaml"
           SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/mfd/mediatek,mt6397.yaml"
           SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/phy/mediatek,dsi-phy.yaml"

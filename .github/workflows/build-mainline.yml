@@ -58,6 +58,7 @@ jobs:
           grep -q '^CONFIG_COMMON_CLK_MT6873=y$' .config
           grep -q '^CONFIG_DRM_MEDIATEK=y$' .config
           grep -q '^CONFIG_SCSI_UFS_MEDIATEK=y$' .config
+          grep -q '^CONFIG_MTK_SMI=y$' .config
 
       - name: Build Image.gz and atom DTB
         run: |

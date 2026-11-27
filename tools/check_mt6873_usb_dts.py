@@ -117,9 +117,6 @@ UNSUPPORTED_INHERITED_CONSUMERS = (
     "audsys",
     "afe",
     "mfgcfg",
-    "smi_common",
-    "larb0",
-    "larb1",
     "ovl0",
     "ovl_2l0",
     "rdma0",
@@ -832,6 +829,93 @@ def check_mutex_consumer(dts, patch_root):
             )
 
 
+def check_smi_providers(dts, patch_root):
+    clean = strip_comments(dts)
+
+    smi_common = extract_braced_body(
+        clean,
+        r"^\s*&smi_common\s*\{",
+        "MT6873 SMI common provider",
+    )
+    require_tokens(
+        "MT6873 SMI common",
+        smi_common,
+        (
+            'compatible = "mediatek,mt6873-smi-common"',
+            "<&mmsys ATOM_MT6873_CLK_MM_SMI_COMMON>",
+            "<&mmsys ATOM_MT6873_CLK_MM_SMI_INFRA>",
+            "<&mmsys ATOM_MT6873_CLK_MM_SMI_GALS>",
+            'clock-names = "apb", "smi", "gals0", "gals1"',
+            "power-domains = <&spm ATOM_MT6873_POWER_DOMAIN_DIS>",
+            'status = "okay"',
+        ),
+    )
+    if smi_common.count("ATOM_MT6873_CLK_MM_SMI_GALS") != 2:
+        raise SystemExit(
+            "[FATAL] MT6873 SMI common must feed both gals0 and gals1"
+        )
+
+    for larb_id in (0, 1):
+        larb = extract_braced_body(
+            clean,
+            r"^\s*&larb{}\s*\{{".format(larb_id),
+            "MT6873 LARB{} provider".format(larb_id),
+        )
+        require_tokens(
+            "MT6873 LARB{}".format(larb_id),
+            larb,
+            (
+                'compatible = "mediatek,mt6873-smi-larb"',
+                "clocks = <&clk26m>, <&clk26m>",
+                'clock-names = "apb", "smi"',
+                "power-domains = <&spm ATOM_MT6873_POWER_DOMAIN_DIS>",
+                'status = "okay"',
+            ),
+        )
+
+    iommu = re.search(r"&iommu0\s*\{(?P<body>.*?)\};", clean, flags=re.S)
+    if not iommu or 'status = "disabled";' not in iommu.group("body"):
+        raise SystemExit(
+            "[FATAL] Stage C0 must leave the MT6873 IOMMU consumer disabled"
+        )
+
+    binding = (
+        Path(patch_root)
+        / "0032-dt-bindings-memory-mediatek-add-mt6873-smi-v6.18.patch"
+    ).read_text(encoding="utf-8")
+    for marker in (
+        "+          - mediatek,mt6873-smi-common",
+        "+          - mediatek,mt6873-smi-larb",
+        "+            - mediatek,mt6873-smi-common",
+        "+              - mediatek,mt6873-smi-larb",
+    ):
+        if marker not in binding:
+            raise SystemExit(
+                "[FATAL] 0032 missing MT6873 SMI binding marker: " + marker
+            )
+
+    driver = (
+        Path(patch_root)
+        / "0033-memory-mediatek-add-mt6873-smi-provider-data-v6.18.patch"
+    ).read_text(encoding="utf-8")
+    for marker in (
+        "+static const u8 mtk_smi_larb_mt6873_ostd",
+        "+	[0] = {0x2, 0x2, 0x28, 0xa, 0xc, 0x28},",
+        "+	[1] = {0x2, 0x2, 0x18, 0x18, 0x18, 0xa, 0xc, 0x28},",
+        "+	.flags_general",
+        "+				      MTK_SMI_FLAG_SW_FLAG,",
+        "+static const struct mtk_smi_reg_pair mtk_smi_common_mt6873_init",
+        "+	{SMI_FIFO_TH1, 0x90a090a},",
+        "+	.bus_sel  = F_MMU1_LARB(1) | F_MMU1_LARB(2) | F_MMU1_LARB(5) |",
+        '+	{.compatible = "mediatek,mt6873-smi-larb",',
+        '+	{.compatible = "mediatek,mt6873-smi-common",',
+    ):
+        if marker not in driver:
+            raise SystemExit(
+                "[FATAL] 0033 missing MT6873 SMI driver marker: " + marker
+            )
+
+
 def check_unsupported_inherited_consumers(dts):
     clean = strip_comments(dts)
 
@@ -1366,6 +1450,7 @@ def main():
     check_mt6873_mipi_tx(args.patch_root)
     check_display_probe_dts(dts, args.patch_root)
     check_mutex_consumer(dts, args.patch_root)
+    check_smi_providers(dts, args.patch_root)
     check_unsupported_inherited_consumers(dts)
     check_vendor_dtbo_symbols(dts, base)
     check_i2c5_mt6360(dts, args.patch_root)
