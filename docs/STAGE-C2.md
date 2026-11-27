@@ -118,3 +118,48 @@ The C2a patch must first pass:
 
 Hardware testing is a separate recovery-only stage and requires a rebuilt
 initramfs, partition hash verification and explicit flashing authorization.
+
+## Public CI result
+
+`DT Check` run `45986324981` completed successfully:
+
+- all 36 patches applied to a clean Linux `v6.18.59` tree;
+- the source-level topology checker passed;
+- the OVL, OVL-2L, RDMA and DSI schemas passed `dt_binding_check`;
+- the target DTB passed focused `dtbs_check`;
+- neither log contained a warning, error or schema message;
+- the DTB retained `__symbols__`.
+
+`Build Mainline` run `45986850835` completed successfully:
+
+- `Image.gz` and the target DTB linked and packed;
+- `build-mainline.log` contained no compiler warning or error;
+- the resulting DTB has 343 nodes, six more than Stage C1 because OVL0 and
+  RDMA0 each gained an empty graph container and two port nodes;
+- the static image verifier confirmed all seven enabled display/memory
+  provider nodes, their MT6873 clock IDs, DIS domain 17, reviewed IOMMU port
+  IDs and disabled downstream consumers.
+
+Generated build outputs:
+
+```text
+Image.gz size    15310559
+Image.gz sha256  af8356e0209b3b367d4e19cce5a5bacbe0c11a29f6039d0a9e7d0e5270a00389
+
+DTB size         59946
+DTB sha256       81c7fe8024106e657f51bf338869d439f979f97790003744bb98b91568187b25
+```
+
+The local recovery-only V61 image, diagnostic ramdisk and complete static
+verification were assembled from these exact outputs. They have not been
+written to the phone:
+
+```text
+ramdisk sha256  9ca038f2b40769ab0e8de062dbc8557e6c5745f0193190176247de46fb289af6
+image sha256    f7a2763726a30003499c2ceb713f8192a1ac8a012e89ee51483b358f04534a2f
+image size      16050176
+```
+
+This proves compilation, patch application, DTB assembly, schema conformance
+and image structure. It does not prove provider probe, IOMMU group membership,
+DMA mapping, TLB behavior or any display function.

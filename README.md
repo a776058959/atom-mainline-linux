@@ -21,6 +21,9 @@ read-only hardware-test fixtures.
   attached.
 - Display Stage B panel attachment is prepared but has not yet been validated
   against a freshly compiled DTB.
+- Display Stage C0/C1 SMI, LARB and main IOMMU providers passed on hardware.
+- Display Stage C2a OVL/RDMA provider probing builds cleanly; its
+  recovery-only image is assembled but has not yet been run on hardware.
 
 See [docs/STATUS.md](docs/STATUS.md) for completed and pending work, and
 [docs/VALIDATION-HISTORY.md](docs/VALIDATION-HISTORY.md) for evidence limits.
