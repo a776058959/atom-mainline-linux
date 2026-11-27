@@ -511,6 +511,25 @@
 	status = "okay";
 };
 
+/*
+ * Stage C1 probes the single main MT6873 display IOMMU registered by current
+ * vendor kernels. The older vendor driver treats bank1-3 as additional
+ * fault/IRQ bases rather than independent translation page tables, so this
+ * stage intentionally uses the upstream one-bank model. No device has an
+ * iommus consumer yet.
+ */
+&iommu0 {
+	compatible = "mediatek,mt6873-m4u";
+	reg = <0 0x1401d000 0 0x1000>;
+	interrupts = <GIC_SPI 277 IRQ_TYPE_LEVEL_HIGH 0>;
+	clocks = <&mmsys ATOM_MT6873_CLK_MM_SMI_IOMMU>;
+	clock-names = "bclk";
+	power-domains = <&spm ATOM_MT6873_POWER_DOMAIN_DIS>;
+	mediatek,larbs = <&larb0>, <&larb1>;
+	#iommu-cells = <1>;
+	status = "okay";
+};
+
 &ovl0 { status = "disabled"; };
 &ovl_2l0 { status = "disabled"; };
 &rdma0 { status = "disabled"; };
@@ -522,7 +541,6 @@
 &dither0 { status = "disabled"; };
 &ovl_2l2 { status = "disabled"; };
 &rdma4 { status = "disabled"; };
-&iommu0 { status = "disabled"; };
 &mipi_tx0 {
 	compatible = "mediatek,mt6873-mipi-tx";
 	clocks = <&clk26m>;
