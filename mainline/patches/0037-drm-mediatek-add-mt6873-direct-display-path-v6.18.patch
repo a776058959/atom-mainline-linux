@@ -28,3 +28,25 @@ diff --git a/drivers/gpu/drm/mediatek/mtk_drm_drv.c b/drivers/gpu/drm/mediatek/m
 +	  .data = &mt6873_mmsys_driver_data},
  	{ .compatible = "mediatek,mt8192-mmsys",
  	  .data = &mt8192_mmsys_driver_data},
+diff --git a/drivers/soc/mediatek/mt6873-mmsys.h b/drivers/soc/mediatek/mt6873-mmsys.h
+--- a/drivers/soc/mediatek/mt6873-mmsys.h
++++ b/drivers/soc/mediatek/mt6873-mmsys.h
+@@ -4,3 +4,5 @@
+ #define __SOC_MEDIATEK_MT6873_MMSYS_H
+-
++
++#define MT6873_DISP_MMSYS_OVL_CON		0xf04
++#define MT6873_DISP_OVL0_GO_TO_RDMA0		BIT(0)
+ #define MT6873_DISP_OVL0_2L_OUT0_MOUT_EN	0xf18
+@@ -37,4 +39,8 @@ static const struct mtk_mmsys_routes mt6873_mmsys_routing_table[] = {
+-		DDP_COMPONENT_DITHER0, DDP_COMPONENT_DSI0,
++		DDP_COMPONENT_DITHER0, DDP_COMPONENT_DSI0,
+-		MT6873_DISP_DSI0_SEL_IN, GENMASK(1, 0), 0x1
++		MT6873_DISP_DSI0_SEL_IN, GENMASK(1, 0), 0x1
++	}, {
++		DDP_COMPONENT_OVL0, DDP_COMPONENT_RDMA0,
++		MT6873_DISP_MMSYS_OVL_CON, GENMASK(1, 0),
++		MT6873_DISP_OVL0_GO_TO_RDMA0
+-	}
++	}
+ };

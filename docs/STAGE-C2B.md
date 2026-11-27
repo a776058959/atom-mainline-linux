@@ -33,7 +33,10 @@ OVL0  -> RDMA0
 RDMA0 -> DSI0
 ```
 
-No additional register-value inference is needed for this direct route.
+The vendor OVL connection code additionally requires
+`MMSYS_OVL_CON` field `CON_OVL0 = 1` for a direct OVL0-to-RDMA connection.
+Patch 0037 adds that route using the vendor-defined `0xf04` register and the
+same two-bit field.
 
 ## Driver data
 

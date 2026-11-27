@@ -1115,6 +1115,10 @@ def check_drm_component_master(patch_root):
         "+\t.mmsys_dev_num = 1,",
         "+\t{ .compatible = \"mediatek,mt6873-mmsys\",",
         "+\t  .data = &mt6873_mmsys_driver_data},",
+        "+#define MT6873_DISP_MMSYS_OVL_CON",
+        "+#define MT6873_DISP_OVL0_GO_TO_RDMA0",
+        "+\t\tMT6873_DISP_MMSYS_OVL_CON, GENMASK(1, 0),",
+        "+\t\tMT6873_DISP_OVL0_GO_TO_RDMA0",
     ):
         if marker not in patch:
             raise SystemExit(
