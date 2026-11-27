@@ -63,7 +63,7 @@ MT8192 hardware operations and the following vendor-confirmed properties:
 - block clock (`HAS_BCLK`);
 - two-bit sub-common LARB ID mapping;
 - output-order write and write-throttle controls;
-- 34-bit IOVA mode and shared page table;
+- 34-bit IOVA mode without multi-IOMMU page-table sharing;
 - one enabled bank;
 - MT8192/MT6893 LARB remap and display/video/camera IOVA regions.
 
@@ -137,3 +137,19 @@ the kernel if they regress. A Stage B kernel with the same V60 initramfs
 reached init at 1.036 seconds, took both snapshots, cancelled its watchdog and
 completed the controlled panic. This proves the V60 user-space diagnostic
 itself; C0/C1 probe evidence still requires a pstore-enabled rebuild.
+
+The first pstore-enabled C1 run exposed the real IOMMU fault before init:
+
+```text
+Unable to handle kernel NULL pointer dereference at virtual address 0x0008
+Workqueue: events_unbound deferred_probe_work_func
+pc: mtk_iommu_probe+0x248/0x550
+Kernel panic - not syncing: Oops: Fatal exception
+```
+
+The initial data copied the MT6893 `SHARE_PGTABLE` flag but did not provide the
+multi-IOMMU `.hw_list`; probe reached
+`list_add_tail(&data->list, data->plat_data->hw_list)` with a null list.
+Stage C1 registers only the main display IOMMU, so `SHARE_PGTABLE` is not
+applicable and has been removed. The checker now rejects that flag until a
+separate multi-IOMMU topology provides a valid shared list.

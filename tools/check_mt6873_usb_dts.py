@@ -958,6 +958,14 @@ def check_smi_providers(dts, patch_root):
             raise SystemExit(
                 "[FATAL] 0035 missing MT6873 IOMMU driver marker: " + marker
             )
+    if (
+        "+			WR_THROT_EN | IOVA_34_EN | SHARE_PGTABLE |"
+        in iommu_driver
+    ):
+        raise SystemExit(
+            "[FATAL] single-IOMMU MT6873 data must not enable SHARE_PGTABLE "
+            "without hw_list"
+        )
 
 
 def check_unsupported_inherited_consumers(dts):
