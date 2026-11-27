@@ -184,6 +184,11 @@ Directly observed:
 - `/sys/class/drm/card0` and `/dev/dri/card0` remained absent;
 - no OVL/RDMA probe failure or deferred-probe entry was captured.
 
+The diagnostic's substring search labelled the `mm_disp_ovl0_2l` clock row as
+`mm_disp_ovl0`. Successful OVL0 probe still proves its clock lookup returned a
+valid handle, but the report does not contain a separate raw OVL0 clock row.
+This wording limitation does not imply a probe error.
+
 The console record also contains the expected userspace-triggered panic. A
 post-panic `pstore: backend (ramoops) writing error (-28)` was observed, but
 the console record still contains the complete probe snapshots and panic path.
