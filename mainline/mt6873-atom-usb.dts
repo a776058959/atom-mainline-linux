@@ -545,6 +545,7 @@
 		     "mediatek,mt8192-disp-ovl";
 	clocks = <&mmsys ATOM_MT6873_CLK_MM_DISP_OVL0>;
 	power-domains = <&spm ATOM_MT6873_POWER_DOMAIN_DIS>;
+	status = "okay";
 
 	ports {
 		#address-cells = <1>;
@@ -558,8 +559,6 @@
 			reg = <1>;
 		};
 	};
-
-	status = "okay";
 };
 
 &ovl_2l0 {
@@ -575,6 +574,7 @@
 		     "mediatek,mt8183-disp-rdma";
 	clocks = <&mmsys ATOM_MT6873_CLK_MM_DISP_RDMA0>;
 	power-domains = <&spm ATOM_MT6873_POWER_DOMAIN_DIS>;
+	status = "okay";
 
 	ports {
 		#address-cells = <1>;
@@ -588,8 +588,6 @@
 			reg = <1>;
 		};
 	};
-
-	status = "okay";
 };
 &color0 { status = "disabled"; };
 &ccorr0 { status = "disabled"; };
