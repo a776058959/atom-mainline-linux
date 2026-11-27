@@ -113,3 +113,27 @@ changes do not alter the referenced nodes.
 
 This proves compilation, DTB assembly and schema conformance. It does not
 prove that the IOMMU probed on the phone.
+
+## Recovery diagnostics correction
+
+The first C0/C1 recovery tests reached the longer black-screen kernel phase
+but produced no new pstore console record. An embedded-config comparison found
+that `olddefconfig` had changed diagnostics-only options:
+
+```text
+Stage B kernel:
+  CONFIG_PSTORE_CONSOLE=y
+  CONFIG_PSTORE_PMSG=y
+  CONFIG_PSTORE_RAM=y
+
+first C0/C1 kernels:
+  CONFIG_PSTORE_CONSOLE=n
+  CONFIG_PSTORE_PMSG=n
+  CONFIG_PSTORE_RAM=m
+```
+
+The config fragment now pins all three to `y`, and the build workflow rejects
+the kernel if they regress. A Stage B kernel with the same V60 initramfs
+reached init at 1.036 seconds, took both snapshots, cancelled its watchdog and
+completed the controlled panic. This proves the V60 user-space diagnostic
+itself; C0/C1 probe evidence still requires a pstore-enabled rebuild.
