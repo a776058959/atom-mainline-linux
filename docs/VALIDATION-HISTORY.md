@@ -77,8 +77,6 @@ screen output.
 
 ## Display Stage C0
 
-This stage is compile/schema-verified only; it has not run on hardware.
-
 Public `DT Check` run `45943655920` passed binding and single-DTB schema
 checks. Public `Build Mainline` run `45944032565` compiled `mtk-smi.o` and
 generated `Image.gz` plus the target DTB without compiler warnings.
@@ -86,9 +84,11 @@ generated `Image.gz` plus the target DTB without compiler warnings.
 The DTB changed only the SMI common and LARB0/LARB1 nodes relative to Stage B.
 IOMMU, OVL, RDMA and traffic-bearing display consumers remain disabled.
 
-## Display Stage C1
+The subsequent Stage C1 hardware diagnostic directly observed the SMI common
+at `14002000` bound to `mtk-smi-common`, and both reviewed LARBs bound to
+`mtk-smi-larb`, without a deferred-probe entry.
 
-This stage is compile/schema-verified only; it has not run on hardware.
+## Display Stage C1
 
 Public `DT Check` run `45947473666` passed binding and single-DTB schema
 checks. Public `Build Mainline` run `45947477132` compiled `mtk_iommu.o` and
@@ -97,6 +97,19 @@ generated `Image.gz` plus the target DTB without compiler warnings.
 The provider uses the single main MT6873 display IOMMU at `0x1401d000`, one
 IRQ, one bank and the two reviewed SMI LARBs. No device consumes its
 `#iommu-cells` yet.
+
+The first recovery run exposed a fatal null shared-page-table list access in
+`mtk_iommu_probe`. The single-provider data incorrectly retained architecture
+for two IOMMUs sharing a page table. Removing that flag fixed the probe.
+
+The rebuilt recovery-only image was then run on hardware. SMI common, LARB0,
+LARB1 and the main IOMMU all bound their intended drivers; the IOMMU bound both
+LARBs as components and no deferred-probe entry appeared. The devices remained
+runtime-suspended with no traffic consumer.
+
+This proves provider probe and component links only. DMA mapping, TLB
+invalidation, fault recovery, SMI traffic, suspend/resume and screen output
+remain unverified.
 
 ## Evidence discipline
 
