@@ -101,7 +101,7 @@ Observed:
 Probe does not run panel prepare/display-on. Screen output remains a later
 stage.
 
-### Stage C0: SMI provider probe prepared, not hardware-verified
+### Stage C0: SMI provider probe compile/schema-verified, not hardware-verified
 
 The inherited MT8192 SMI common and LARB0/LARB1 nodes are replaced with
 MT6873-specific providers at the same addresses. MT6873 register defaults,
@@ -111,6 +111,17 @@ vendor source.
 IOMMU, OVL, RDMA and all display traffic remain disabled. Vendor LARB0 has an
 additional WRR setup that upstream `mtk-smi` does not yet model; traffic must
 not be enabled until that is resolved.
+
+Public `DT Check` run `45943655920` and `Build Mainline` run `45944032565`
+completed successfully. The latter compiled `mtk-smi.o` and generated:
+
+```text
+Image.gz sha256  2a814bb32bc78a4e7330fc2ab18399ba2ef163e22fcc9b7a507088f43a914e19
+DTB sha256       b333db80ed5bf9a46a62c1a61658df3fb0e4df879c349ceb87e85782db94a7d9
+```
+
+The DTB still has 337 nodes; only the reviewed SMI common/LARB0/LARB1 nodes
+changed relative to Stage B. Hardware provider probe has not been run.
 
 ## Pending
 

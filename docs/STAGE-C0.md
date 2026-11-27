@@ -65,3 +65,43 @@ built in, the formal DTB must pass `dt_binding_check` and `dtbs_check`, and
 the focused topology checker must pass before any recovery image is
 assembled. Hardware boot and probe validation require a separate test stage
 and explicit flashing authorization.
+
+## Public CI result
+
+`DT Check` run `45943655920` completed successfully:
+
+- all 33 patches applied to a clean Linux `v6.18.59` tree;
+- the source-level topology checker passed;
+- `dt_binding_check` passed;
+- the focused single-DTB `dtbs_check` passed;
+- both logs contained no warning, error or schema message;
+- the resulting DTB retained `__symbols__`.
+
+`Build Mainline` run `45944032565` also completed successfully:
+
+- `CONFIG_MTK_SMI=y` survived `olddefconfig`;
+- `drivers/memory/mtk-smi.o` was compiled;
+- `vmlinux`, `Image.gz` and the atom DTB linked and packed successfully;
+- `build-mainline.log` contained no compiler warning or error.
+
+Generated outputs:
+
+```text
+Image.gz size    15298410
+Image.gz sha256  2a814bb32bc78a4e7330fc2ab18399ba2ef163e22fcc9b7a507088f43a914e19
+
+DTB size         59738
+DTB sha256       b333db80ed5bf9a46a62c1a61658df3fb0e4df879c349ceb87e85782db94a7d9
+```
+
+Compared with the hardware-tested Stage B DTB, both trees contain 337 nodes
+and no node was added or removed. Only these nodes changed:
+
+```text
+/soc/smi@14002000   clocks, compatible, power-domains, status
+/soc/larb@14003000  compatible, power-domains, status
+/soc/larb@14004000  compatible, power-domains, status
+```
+
+This proves source application, kernel compilation, DTB generation and schema
+conformance. It does not prove that any SMI provider probed on the phone.

@@ -66,6 +66,26 @@ panel             disabled
 
 The MIPI PLL remained off because no panel/DRM mode was enabled.
 
+## Display Stage B
+
+The panel device bound `panel-samsung-s6e8fc01`. Its probe acquired GPIO29,
+GPIO42 and the MT6359 VIBR regulator without enabling the rail, then completed
+`mipi_dsi_attach()`. No panel probe or deferred-probe failure was logged.
+
+This does not cover panel prepare/display-on, PLL lock, DSI packet transfer or
+screen output.
+
+## Display Stage C0
+
+This stage is compile/schema-verified only; it has not run on hardware.
+
+Public `DT Check` run `45943655920` passed binding and single-DTB schema
+checks. Public `Build Mainline` run `45944032565` compiled `mtk-smi.o` and
+generated `Image.gz` plus the target DTB without compiler warnings.
+
+The DTB changed only the SMI common and LARB0/LARB1 nodes relative to Stage B.
+IOMMU, OVL, RDMA and traffic-bearing display consumers remain disabled.
+
 ## Evidence discipline
 
 Historical test images intentionally ended in a controlled panic so pstore
