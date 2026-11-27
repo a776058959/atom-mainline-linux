@@ -250,7 +250,7 @@ The original recovery was restored and revalidated as
 `6a24c75e809bbae2dc062a91d922171a11cba261f6b0071bc93099ad73bd0fd6`;
 `boot`, `misc` and `dtbo` retained their original hashes.
 
-### V63: mutex mapping build prepared
+### V63: DRM bind fixed, frame completion still failed
 
 The mutex component mapping was isolated as patch 0038. Clean-tree validation
 and build both passed:
@@ -271,13 +271,37 @@ ramdisk sha256  6c91fbaa6030cb28b2a4c92804752e03a939638b737fe4696dcd1cbb96ce3e78
 dt_table sha256 744eeb82e42e84273ea4c226b01eabc153e44efda172344385b3b545ea7e6f80
 ```
 
-The flasher and recovery-restore dry-runs rechecked the connected
-`M2004J7AC / mt6873` device and original partition hashes. V63 has not been
-written to the phone.
+V63 was written and booted on hardware. Patch 0038 fixed DRM binding:
+
+```text
+mediatek-drm bound OVL0, RDMA0 and DSI
+drm_master_driver=mediatek-drm
+drm_card_device=present
+fb_node_device=present
+card0-DSI-1 status=connected enabled=enabled
+framebuffer_test=white_frame_written
+```
+
+No white image appeared. The display pipeline did not complete frames:
+
+```text
+[CRTC:59:crtc-0] vblank wait timed out
+interrupt=311: 1 GICv3 286 Level 14005000.ovl
+interrupt=312: 0 GICv3 287 Level 14006000.ovl
+interrupt=313: 0 GICv3 288 Level 14007000.rdma
+```
+
+OVL0/RDMA0/DSI clocks, the 1098 MHz MIPI TX PLL, the DISP power domain and the
+VIBR regulator were enabled. Vendor `ddp_mutex.c` maps OVL0 to MOD0 bit 0,
+RDMA0 to bit 2 and DSI0 to bit 12; the mainline MT6873 table had the first two
+but omitted DSI0. Patch 0039 adds only that missing mutex input. V64 must verify
+nonzero RDMA completion interrupts and the disappearance of vblank timeout;
+visible output remains a separate hardware result.
 
 ## Pending
 
-- Stage C2b V63 DRM master bind and first-frame hardware validation;
+- build and validate V64 with the DSI0 mutex module bit;
+- Stage C2b first-frame completion and visible-output validation;
 - full DRM component chain and routing;
 - MT6873 SMI traffic validation, LARB0 WRR handling and legacy IOMMU bank
   fault-reporting;

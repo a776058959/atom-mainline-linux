@@ -190,4 +190,39 @@ dt_table sha256 744eeb82e42e84273ea4c226b01eabc153e44efda172344385b3b545ea7e6f80
 ```
 
 All 59 assembly checks passed, the flasher dry-run passed, and the recovery
-restore dry-run reported `already-restored`. The phone was not modified.
+restore dry-run reported `already-restored`.
+
+## V63 hardware result
+
+V63 was written and booted. Patch 0038 fixed the previous DRM master failure:
+DRM bound OVL0, RDMA0 and DSI, `/dev/dri/card0` and `/dev/fb0` appeared, the
+DSI connector was connected and enabled, and the diagnostic wrote its white
+framebuffer.
+
+The screen remained black. Three atomic commits timed out:
+
+```text
+[CRTC:59:crtc-0] vblank wait timed out
+```
+
+At the settled snapshot, OVL0 IRQ 311 had fired once while RDMA0 IRQ 313 had
+never fired. OVL0, RDMA0, DSI, the MIPI TX PLL, the DISP power domain and the
+VIBR regulator were enabled. This locates the failure after DRM bind but before
+completed scanout.
+
+## V64 mutex fix
+
+Vendor `ddp_mutex.c` maps the primary path modules as:
+
+```text
+DISP_MODULE_OVL0   -> MUTEX MOD0 bit 0
+DISP_MODULE_RDMA0  -> MUTEX MOD0 bit 2
+DISP_MODULE_DSI0   -> MUTEX MOD0 bit 12
+```
+
+Patch 0023 added the first two MT6873 bits but omitted DSI0. Patch 0039 adds
+the vendor-confirmed DSI0 bit and the topology checker now requires it.
+
+Expected V64 evidence is a nonzero RDMA frame-end interrupt count and no
+`vblank wait timed out` warning. A visible white frame remains a separate
+functional result.

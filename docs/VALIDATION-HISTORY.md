@@ -158,6 +158,22 @@ V62 therefore proves the provider, panel-attachment and IOMMU topology at the
 point before DRM bind. It does not prove mutex programming, modeset, DMA
 mapping, RDMA/OVL traffic, DSI PLL lock or panel output.
 
+## Display Stage C2b V63
+
+V63 included the mutex component mapping from patch 0038. DRM then bound OVL0,
+RDMA0 and DSI; the DRM master, card node, framebuffer node and enabled DSI
+connector all appeared. The diagnostic completed its white framebuffer write.
+
+No white image was visible. DRM atomic commits timed out three times waiting
+for vblank. In the settled snapshot, OVL0 IRQ 311 had one occurrence while
+RDMA0 IRQ 313 had zero. Display clocks, the 1098 MHz MIPI TX PLL, the DISP
+power domain and the VIBR regulator were enabled.
+
+The vendor MT6873 mutex map assigns OVL0, RDMA0 and DSI0 to MOD0 bits 0, 2 and
+12. The existing mainline MT6873 table omitted DSI0. Patch 0039 adds that bit.
+V63 proves DRM registration, connector setup, framebuffer allocation/write and
+clock/provider state, but not completed scanout or visible output.
+
 ## Evidence discipline
 
 Historical test images intentionally ended in a controlled panic so pstore

@@ -29,6 +29,7 @@ The patches apply in numeric order to a clean Linux `v6.18.59` tree.
 0036          MT6873 OVL/OVL-2L/RDMA binding fallbacks
 0037          MT6873 direct DRM component-master path
 0038          MT6873 disp-mutex DRM component mapping
+0039          MT6873 DSI0 disp-mutex module bit
 ```
 
 Patches are evidence-backed pieces of an in-progress port, not a claim that

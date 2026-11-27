@@ -835,6 +835,20 @@ def check_mutex_consumer(dts, patch_root):
             "[FATAL] 0038 missing MT6873 DRM mutex component mapping"
         )
 
+    dsi_mapping_patch = (
+        Path(patch_root)
+        / "0039-soc-mediatek-add-mt6873-dsi-mutex-bit-v6.18.patch"
+    ).read_text(encoding="utf-8")
+    dsi_mapping_markers = (
+        "+#define MT6873_MUTEX_MOD_DISP_DSI0\t\t12",
+        "+	[DDP_COMPONENT_DSI0] = MT6873_MUTEX_MOD_DISP_DSI0,",
+    )
+    for marker in dsi_mapping_markers:
+        if marker not in dsi_mapping_patch:
+            raise SystemExit(
+                "[FATAL] 0039 missing MT6873 DSI0 mutex module bit"
+            )
+
     power_patch = (
         Path(patch_root)
         / "0024-pmdomain-mediatek-log-power-on-failures-v6.18.patch"
