@@ -31,7 +31,8 @@ read-only hardware-test fixtures.
   completed, but vblank timed out and RDMA generated no frame interrupts.
   Patch 0039 added the vendor-confirmed DSI0 mutex input, but V64 showed the
   same failure. Patches 0040/0041 now add vendor-backed MT6873 OVL start
-  settings and the correct 35840-byte RDMA FIFO; V65 is pending.
+  settings and the correct 35840-byte RDMA FIFO. V65 passed CI and static
+  checks and is flashed into recovery; hardware validation is pending.
 
 See [docs/STATUS.md](docs/STATUS.md) for completed and pending work, and
 [docs/VALIDATION-HISTORY.md](docs/VALIDATION-HISTORY.md) for evidence limits.

@@ -333,9 +333,22 @@ mainline start path applies. Patches 0040 and 0041 add explicit MT6873 OVL and
 RDMA data; the DTS now selects the 35840-byte FIFO. V65 must verify these
 changes on hardware.
 
+V65 then passed clean-tree build and recovery assembly:
+
+```text
+DT Check run        46042294627  success
+Build Mainline run  46042299611  success
+Image.gz sha256     6a0ae0af3a2910c4d661e568fbe4d4fd29390d079d5e86b8ae3020d1514c42dc
+DTB sha256          f041bf87b0b7b9df72be2e00b274c184b19eb7ea4625b5f0211f7ddd2288d665
+image sha256        20f1790c090965691330c3913327d3273b31c030c01b2fe24257e958b1920571
+```
+
+The image passed all 59 assembly checks and was written to recovery with a
+full readback and protected-partition hash check. The device was not rebooted.
+
 ## Pending
 
-- build and validate V65 with MT6873 OVL start and RDMA FIFO data;
+- V65 recovery-only hardware validation;
 - Stage C2b first-frame completion and visible-output validation;
 - full DRM component chain and routing;
 - MT6873 SMI traffic validation, LARB0 WRR handling and legacy IOMMU bank

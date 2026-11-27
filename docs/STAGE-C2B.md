@@ -271,3 +271,20 @@ The board DTS overrides `mediatek,rdma-fifo-size` with 35840.
 
 Expected V65 evidence is again a nonzero RDMA frame-end interrupt and no
 vblank timeout. Visible output remains independent.
+
+## V65 build and flash
+
+V65 passed CI and assembly:
+
+```text
+DT Check run        46042294627  success
+Build Mainline run  46042299611  success
+Image.gz sha256     6a0ae0af3a2910c4d661e568fbe4d4fd29390d079d5e86b8ae3020d1514c42dc
+DTB sha256          f041bf87b0b7b9df72be2e00b274c184b19eb7ea4625b5f0211f7ddd2288d665
+image size          16052224
+image sha256        20f1790c090965691330c3913327d3273b31c030c01b2fe24257e958b1920571
+```
+
+All 59 assembly checks and the flash dry-run passed. The image was written to
+recovery and read back byte-for-byte. `boot`, `misc` and `dtbo` retained their
+original hashes. The device was not rebooted.
