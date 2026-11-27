@@ -42,3 +42,29 @@ Those belong to later full-DRM and panel-power tests.
 The `DT Check` workflow must pass on this branch before any recovery image is
 assembled. Binary vendor dtbo fixtures are intentionally not present in this
 public repository; source-level placeholder and symbol checks still run.
+
+## Public CI result
+
+`DT Check` run `45933305710` completed successfully:
+
+- all patches applied to Linux `v6.18.59`;
+- the source-level topology check passed;
+- `dt_binding_check` passed;
+- single-DTB `dtbs_check` passed without warning/error/schema messages;
+- the resulting DTB retained `__symbols__`;
+- the artifact uploaded successfully.
+
+Generated DTB:
+
+```text
+size      59750
+sha256    f0882fc50772625adfb21fd148a00b753f528a26f6bdf6d9790a304f96a73900
+```
+
+Compared with the hardware-tested Stage A DTB, the node count remains 337,
+no nodes were added or removed, and `/soc/dsi@14010000/panel@0` is the only
+changed node. Its non-status properties are identical; only the status
+changed from `disabled` to `okay`.
+
+The recovery-only image preparation gate also passed all 43 local assembler
+checks. It has not been flashed or booted.
