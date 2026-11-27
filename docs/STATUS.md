@@ -144,6 +144,11 @@ DTB sha256       59e62d69a097639567b9902aa506c53d27d1c6ae282309409a39702d1e300e2
 The DTB still has 337 nodes. Hardware IOMMU probe, DMA mapping, TLB behavior
 and fault handling have not been run.
 
+The initial recovery diagnostics had `CONFIG_PSTORE_CONSOLE=n`,
+`CONFIG_PSTORE_PMSG=n` and `CONFIG_PSTORE_RAM=m`, so a successful run could
+not preserve its log. The config fragment and build gate now force all three
+to `y`; the next hardware run uses this rebuilt kernel.
+
 ## Pending
 
 - full DRM/OVL/RDMA chain;
