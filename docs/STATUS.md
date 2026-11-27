@@ -208,9 +208,30 @@ and every protected partition hash was revalidated.
 DMA mapping, TLB invalidation, OVL/RDMA traffic, DRM component binding and
 scanout remain unverified.
 
+### Stage C2b: direct DRM pipeline prepared, hardware pending
+
+Stage C2b adds an MT6873 DRM component master with the vendor-confirmed direct
+primary path `OVL0 -> RDMA0 -> DSI0`. It also adds the vendor-defined
+`MMSYS_OVL_CON.CON_OVL0 = 1` route required for the direct OVL-to-RDMA
+selection.
+
+Public `DT Check` run `46019618614` and `Build Mainline` run `46019616018`
+completed successfully on the final C2b branch:
+
+```text
+Image.gz sha256  40257fc290f2fdf86e865b50db7b2548c681bae1093ad3f59661cb538db85c82
+DTB sha256       81c7fe8024106e657f51bf338869d439f979f97790003744bb98b91568187b25
+```
+
+The recovery-only V62 image passed 59 static checks and has SHA-256
+`0eb1ddfebced6c4ab3dfec2ca6534e4e68d405814eb8c47b0ed20b6d751db41f`.
+It writes a white frame through `/dev/fb0` under both a write timeout and an
+independent 60-second watchdog. The flasher dry-run passed; the image has not
+yet been written to the phone.
+
 ## Pending
 
-- DRM component-master registration for MT6873 MMSYS;
+- Stage C2b DRM master and first-frame hardware validation;
 - full DRM component chain and routing;
 - MT6873 SMI traffic validation, LARB0 WRR handling and legacy IOMMU bank
   fault-reporting;

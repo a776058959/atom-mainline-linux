@@ -79,6 +79,7 @@ If the path is correct, the recovery diagnostic should capture:
 - no display driver Oops, BUG, WARNING or deferred probe;
 - DSI and RDMA interrupt activity if framebuffer setup performs a mode set;
 - panel prepare and MT6359 VIBR regulator enable;
+- a scripted all-white framebuffer write when `/dev/fb0` exists;
 - either visible output or a later, explicitly identified blocker.
 
 A controlled panic remains the log-collection mechanism. Screen output is not
@@ -94,3 +95,41 @@ assumed merely because the DRM device registers.
 - recovery-only image and partition backups are revalidated before any flash.
 
 Hardware testing requires a new explicit flashing authorization.
+
+## Public CI result
+
+`DT Check` run `46019618614` and `Build Mainline` run `46019616018` both
+completed successfully on commit `e85a7ab`.
+
+- all 37 patches applied to a clean Linux `v6.18.59` tree;
+- the source-level topology checker passed;
+- `dt_binding_check` and focused `dtbs_check` passed without warning/error;
+- `Image.gz` and the atom DTB built without compiler warning/error;
+- the DTB remained unchanged because C2b changes kernel driver data only.
+
+Generated outputs:
+
+```text
+Image.gz size    15309885
+Image.gz sha256  40257fc290f2fdf86e865b50db7b2548c681bae1093ad3f59661cb538db85c82
+
+DTB size         59946
+DTB sha256       81c7fe8024106e657f51bf338869d439f979f97790003744bb98b91568187b25
+```
+
+The V62 recovery-only diagnostic was assembled from these exact outputs and
+passed 59 static checks:
+
+```text
+ramdisk sha256  2190b831bdf1095c15903d6f3c94e4f683fb8e4c50af887505fc7a7a0de3669b
+image sha256    0eb1ddfebced6c4ab3dfec2ca6534e4e68d405814eb8c47b0ed20b6d751db41f
+image size      16050176
+```
+
+The V62 ramdisk waits for early and settled DRM state, writes one all-white
+framebuffer only when `/dev/fb0` exists, snapshots the connector/clock state,
+and retains a 60-second watchdog around the write and a 15-second framebuffer
+write timeout.
+
+The flasher dry-run passed against the current Android device and the original
+recovery/protected partition hashes. The image has not yet been written.
