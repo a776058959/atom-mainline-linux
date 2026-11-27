@@ -29,8 +29,9 @@ read-only hardware-test fixtures.
   fixed that mapping and V63 bound DRM, `/dev/dri/card0` and `/dev/fb0`.
   V63 then exposed a missing DSI0 mutex module bit: white framebuffer writes
   completed, but vblank timed out and RDMA generated no frame interrupts.
-  Patch 0039 adds the vendor-confirmed DSI0 mutex input. V64 passed the
-  39-patch build and static checks; hardware validation is pending.
+  Patch 0039 added the vendor-confirmed DSI0 mutex input, but V64 showed the
+  same failure. Patches 0040/0041 now add vendor-backed MT6873 OVL start
+  settings and the correct 35840-byte RDMA FIFO; V65 is pending.
 
 See [docs/STATUS.md](docs/STATUS.md) for completed and pending work, and
 [docs/VALIDATION-HISTORY.md](docs/VALIDATION-HISTORY.md) for evidence limits.

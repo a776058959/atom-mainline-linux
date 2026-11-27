@@ -174,6 +174,20 @@ The vendor MT6873 mutex map assigns OVL0, RDMA0 and DSI0 to MOD0 bits 0, 2 and
 V63 proves DRM registration, connector setup, framebuffer allocation/write and
 clock/provider state, but not completed scanout or visible output.
 
+## Display Stage C2b V64
+
+V64 included DSI0 mutex MOD0 bit 12. It booted with the same DRM, framebuffer
+and connector state as V63, and the white framebuffer write completed.
+
+The hardware result was unchanged: three vblank waits timed out, OVL0 IRQ 311
+remained at one and RDMA0 IRQ 313 remained at zero. No white image appeared.
+The DSI0 mutex bit is therefore not the blocking defect.
+
+The vendor MT6873 DRM source exposes two additional active-path differences:
+the RDMA FIFO is 35840 bytes rather than MT8192's 5120 bytes, and OVL start
+programs `GCLAST_EN`, `OUTPUT_CLAMP` and force-relay mode. Patches 0040/0041
+will be tested next in V65.
+
 ## Evidence discipline
 
 Historical test images intentionally ended in a controlled panic so pstore

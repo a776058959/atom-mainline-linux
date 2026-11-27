@@ -1,0 +1,99 @@
+diff --git a/drivers/gpu/drm/mediatek/mtk_disp_ovl.c b/drivers/gpu/drm/mediatek/mtk_disp_ovl.c
+--- a/drivers/gpu/drm/mediatek/mtk_disp_ovl.c
++++ b/drivers/gpu/drm/mediatek/mtk_disp_ovl.c
+@@ -32,6 +32,7 @@
+ #define OVL_LAYER_AFBC_EN(n)				BIT(4+n)
+ #define DISP_REG_OVL_ROI_BGCLR			0x0028
+ #define DISP_REG_OVL_SRC_CON			0x002c
++#define OVL_FORCE_RELAY_MODE				BIT(8)
+ #define DISP_REG_OVL_CON(n)			(0x0030 + 0x20 * (n))
+ #define DISP_REG_OVL_SRC_SIZE(n)		(0x0038 + 0x20 * (n))
+ #define DISP_REG_OVL_OFFSET(n)			(0x003c + 0x20 * (n))
+@@ -51,6 +52,8 @@
+ #define DISP_REG_OVL_ADDR(ovl, n)		((ovl)->data->addr + 0x20 * (n))
+ #define DISP_REG_OVL_HDR_ADDR(ovl, n)		((ovl)->data->addr + 0x20 * (n) + 0x04)
+ #define DISP_REG_OVL_HDR_PITCH(ovl, n)		((ovl)->data->addr + 0x20 * (n) + 0x08)
++#define OVL_GCLAST_EN				BIT(24)
++#define OVL_OUTPUT_CLAMP			BIT(26)
+ 
+ #define GMC_THRESHOLD_BITS	16
+ #define GMC_THRESHOLD_HIGH	((1 << GMC_THRESHOLD_BITS) / 4)
+@@ -150,6 +153,7 @@ struct mtk_disp_ovl_data {
+ 	const u32 *formats;
+ 	size_t num_formats;
+ 	bool supports_clrfmt_ext;
++	bool mt6873_quirks;
+ };
+ 
+ /*
+@@ -268,6 +272,17 @@ void mtk_ovl_start(struct device *dev)
+ 		reg = reg | OVL_LAYER_SMI_ID_EN;
+ 		writel_relaxed(reg, ovl->regs + DISP_REG_OVL_DATAPATH_CON);
+ 	}
++	if (ovl->data->mt6873_quirks) {
++		unsigned int reg;
++
++		reg = readl(ovl->regs + DISP_REG_OVL_DATAPATH_CON);
++		reg |= OVL_GCLAST_EN | OVL_OUTPUT_CLAMP;
++		writel_relaxed(reg, ovl->regs + DISP_REG_OVL_DATAPATH_CON);
++
++		reg = readl(ovl->regs + DISP_REG_OVL_SRC_CON);
++		reg |= OVL_FORCE_RELAY_MODE;
++		writel_relaxed(reg, ovl->regs + DISP_REG_OVL_SRC_CON);
++	}
+ 	writel_relaxed(0x1, ovl->regs + DISP_REG_OVL_EN);
+ }
+ 
+@@ -711,6 +726,20 @@ static const struct mtk_disp_ovl_data mt8192_ovl_driver_data = {
+ 	.num_formats = ARRAY_SIZE(mt8173_formats),
+ };
+ 
++static const struct mtk_disp_ovl_data mt6873_ovl_driver_data = {
++	.addr = DISP_REG_OVL_ADDR_MT8173,
++	.gmc_bits = 10,
++	.layer_nr = 4,
++	.fmt_rgb565_is_0 = true,
++	.smi_id_en = true,
++	.blend_modes = BIT(DRM_MODE_BLEND_PREMULTI) |
++		       BIT(DRM_MODE_BLEND_COVERAGE) |
++		       BIT(DRM_MODE_BLEND_PIXEL_NONE),
++	.formats = mt8173_formats,
++	.num_formats = ARRAY_SIZE(mt8173_formats),
++	.mt6873_quirks = true,
++};
++
+ static const struct mtk_disp_ovl_data mt8192_ovl_2l_driver_data = {
+ 	.addr = DISP_REG_OVL_ADDR_MT8173,
+ 	.gmc_bits = 10,
+@@ -724,6 +753,20 @@ static const struct mtk_disp_ovl_data mt8192_ovl_2l_driver_data = {
+ 	.num_formats = ARRAY_SIZE(mt8173_formats),
+ };
+ 
++static const struct mtk_disp_ovl_data mt6873_ovl_2l_driver_data = {
++	.addr = DISP_REG_OVL_ADDR_MT8173,
++	.gmc_bits = 10,
++	.layer_nr = 2,
++	.fmt_rgb565_is_0 = true,
++	.smi_id_en = true,
++	.blend_modes = BIT(DRM_MODE_BLEND_PREMULTI) |
++		       BIT(DRM_MODE_BLEND_COVERAGE) |
++		       BIT(DRM_MODE_BLEND_PIXEL_NONE),
++	.formats = mt8173_formats,
++	.num_formats = ARRAY_SIZE(mt8173_formats),
++	.mt6873_quirks = true,
++};
++
+ static const struct mtk_disp_ovl_data mt8195_ovl_driver_data = {
+ 	.addr = DISP_REG_OVL_ADDR_MT8173,
+ 	.gmc_bits = 10,
+@@ -748,6 +791,10 @@ static const struct of_device_id mtk_disp_ovl_driver_dt_match[] = {
+ 	  .data = &mt8183_ovl_driver_data},
+ 	{ .compatible = "mediatek,mt8183-disp-ovl-2l",
+ 	  .data = &mt8183_ovl_2l_driver_data},
++	{ .compatible = "mediatek,mt6873-disp-ovl",
++	  .data = &mt6873_ovl_driver_data},
++	{ .compatible = "mediatek,mt6873-disp-ovl-2l",
++	  .data = &mt6873_ovl_2l_driver_data},
+ 	{ .compatible = "mediatek,mt8192-disp-ovl",
+ 	  .data = &mt8192_ovl_driver_data},
+ 	{ .compatible = "mediatek,mt8192-disp-ovl-2l",

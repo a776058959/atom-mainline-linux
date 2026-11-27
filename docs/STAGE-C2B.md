@@ -249,3 +249,25 @@ dt_table sha256 744eeb82e42e84273ea4c226b01eabc153e44efda172344385b3b545ea7e6f80
 
 The flasher and restore dry-runs passed against the connected
 `M2004J7AC / mt6873` device. No partition has been modified.
+
+## V64 hardware result
+
+V64 was written and tested. Patch 0039 did not change the failure:
+DRM/card/fb and the DSI connector were present, the white framebuffer write
+succeeded, but vblank timed out three times and RDMA IRQ 313 stayed at zero.
+The original recovery was restored and hash-verified after log collection.
+
+## V65 OVL and RDMA data
+
+The Xiaomi MT6873 DRM driver provides two concrete differences on the active
+path:
+
+- MT6873 RDMA FIFO is 3 KiB + 32 KiB = 35840 bytes, not MT8192's 5120 bytes;
+- MT6873 OVL start sets `GCLAST_EN`, `OUTPUT_CLAMP`, and force-relay mode.
+
+Patch 0040 adds explicit MT6873 OVL/OVL-2L driver data and start settings.
+Patch 0041 adds explicit MT6873 RDMA driver data with the correct FIFO size.
+The board DTS overrides `mediatek,rdma-fifo-size` with 35840.
+
+Expected V65 evidence is again a nonzero RDMA frame-end interrupt and no
+vblank timeout. Visible output remains independent.

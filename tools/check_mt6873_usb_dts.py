@@ -757,6 +757,24 @@ def check_display_probe_dts(dts, patch_root):
                 "+		usleep_range(10000, 11000);",
             ),
         ),
+        "OVL start": (
+            "0040-drm-mediatek-add-mt6873-ovl-start-v6.18.patch",
+            (
+                "+#define OVL_FORCE_RELAY_MODE",
+                "+#define OVL_GCLAST_EN",
+                "+#define OVL_OUTPUT_CLAMP",
+                "+	.mt6873_quirks = true,",
+                '+	{ .compatible = "mediatek,mt6873-disp-ovl",',
+                '+	{ .compatible = "mediatek,mt6873-disp-ovl-2l",',
+            ),
+        ),
+        "RDMA data": (
+            "0041-drm-mediatek-add-mt6873-rdma-data-v6.18.patch",
+            (
+                "+	.fifo_size = SZ_1K * 3 + SZ_32K,",
+                '+	{ .compatible = "mediatek,mt6873-disp-rdma",',
+            ),
+        ),
     }
 
     for label, (filename, markers) in patches.items():
@@ -1057,6 +1075,12 @@ def check_display_pipeline_providers(dts, base, patch_root):
                 "clocks = <&mmsys {}>".format(clock),
             ),
         )
+        if label == "rdma0":
+            require_tokens(
+                "MT6873 RDMA FIFO",
+                normalized,
+                ("mediatek,rdma-fifo-size = <35840>",),
+            )
 
     for label in ("ovl0", "rdma0"):
         body = extract_braced_body(

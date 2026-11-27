@@ -573,6 +573,8 @@
 	compatible = "mediatek,mt6873-disp-rdma",
 		     "mediatek,mt8183-disp-rdma";
 	clocks = <&mmsys ATOM_MT6873_CLK_MM_DISP_RDMA0>;
+	/* Vendor MT6873 RDMA data uses 3 KiB + 32 KiB of FIFO. */
+	mediatek,rdma-fifo-size = <35840>;
 	power-domains = <&spm ATOM_MT6873_POWER_DOMAIN_DIS>;
 	status = "okay";
 

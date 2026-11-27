@@ -321,9 +321,21 @@ dt_table sha256 744eeb82e42e84273ea4c226b01eabc153e44efda172344385b3b545ea7e6f80
 The flasher dry-run passed and the restore dry-run reported
 `already-restored`. V64 has not been written to the phone.
 
+V64 was written and tested. It produced the same failure as V63: DRM/card/fb
+and the connector were present, the white framebuffer write completed, but
+vblank timed out three times and RDMA IRQ 313 remained zero. Patch 0039 alone
+therefore did not address the blocking failure.
+
+The Xiaomi MT6873 DRM driver uses a 35840-byte RDMA FIFO, while the formal DTS
+inherited MT8192's 5120-byte value. Its MT6873 OVL start path also sets
+`GCLAST_EN`, `OUTPUT_CLAMP`, and force-relay mode, none of which the current
+mainline start path applies. Patches 0040 and 0041 add explicit MT6873 OVL and
+RDMA data; the DTS now selects the 35840-byte FIFO. V65 must verify these
+changes on hardware.
+
 ## Pending
 
-- V64 recovery-only hardware validation;
+- build and validate V65 with MT6873 OVL start and RDMA FIFO data;
 - Stage C2b first-frame completion and visible-output validation;
 - full DRM component chain and routing;
 - MT6873 SMI traffic validation, LARB0 WRR handling and legacy IOMMU bank
