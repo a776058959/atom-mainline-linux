@@ -121,7 +121,9 @@ initramfs, partition hash verification and explicit flashing authorization.
 
 ## Public CI result
 
-`DT Check` run `45986324981` completed successfully:
+`DT Check` run `45990749452` on the final branch completed successfully.
+The equivalent first run `45986324981` preceded a whitespace-only patch-file
+cleanup:
 
 - all 36 patches applied to a clean Linux `v6.18.59` tree;
 - the source-level topology checker passed;

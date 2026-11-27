@@ -178,8 +178,10 @@ Empty graph ports satisfy the upstream bindings without declaring a live
 display route. Color, CCORR, AAL, gamma, postmask, dither, OVL2-2L, RDMA4 and
 the DRM component master remain disabled.
 
-Public `DT Check` run `45986324981` and `Build Mainline` run `45986850835`
-completed successfully:
+Public final-branch `DT Check` run `45990749452` and `Build Mainline` run
+`45986850835` completed successfully. The earlier DT run `45986324981`
+produced the same Build Mainline input tree before a whitespace-only cleanup
+of the binding patch file:
 
 ```text
 Image.gz sha256  af8356e0209b3b367d4e19cce5a5bacbe0c11a29f6039d0a9e7d0e5270a00389
