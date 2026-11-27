@@ -86,6 +86,18 @@ generated `Image.gz` plus the target DTB without compiler warnings.
 The DTB changed only the SMI common and LARB0/LARB1 nodes relative to Stage B.
 IOMMU, OVL, RDMA and traffic-bearing display consumers remain disabled.
 
+## Display Stage C1
+
+This stage is compile/schema-verified only; it has not run on hardware.
+
+Public `DT Check` run `45947473666` passed binding and single-DTB schema
+checks. Public `Build Mainline` run `45947477132` compiled `mtk_iommu.o` and
+generated `Image.gz` plus the target DTB without compiler warnings.
+
+The provider uses the single main MT6873 display IOMMU at `0x1401d000`, one
+IRQ, one bank and the two reviewed SMI LARBs. No device consumes its
+`#iommu-cells` yet.
+
 ## Evidence discipline
 
 Historical test images intentionally ended in a controlled panic so pstore
