@@ -24,8 +24,9 @@ read-only hardware-test fixtures.
 - Display Stage C0/C1 SMI, LARB and main IOMMU providers passed on hardware.
 - Display Stage C2a OVL/RDMA providers bind on hardware, attach to the expected
   LARBs and a shared IOMMU group, and remain behind the no-DRM-card boundary.
-- Display Stage C2b direct DRM pipeline builds cleanly and its recovery-only
-  V62 first-frame diagnostic is prepared; hardware validation is pending.
+- Display Stage C2b V62 reached all OVL/RDMA/DSI/panel providers but exposed a
+  missing MT6873 disp-mutex component mapping before DRM bind. Patch 0038
+  fixes that mapping; the next recovery-only image has not been built.
 
 See [docs/STATUS.md](docs/STATUS.md) for completed and pending work, and
 [docs/VALIDATION-HISTORY.md](docs/VALIDATION-HISTORY.md) for evidence limits.

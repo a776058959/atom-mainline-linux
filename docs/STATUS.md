@@ -208,7 +208,7 @@ and every protected partition hash was revalidated.
 DMA mapping, TLB invalidation, OVL/RDMA traffic, DRM component binding and
 scanout remain unverified.
 
-### Stage C2b: direct DRM pipeline prepared, hardware pending
+### Stage C2b: V62 found a missing mutex component mapping
 
 Stage C2b adds an MT6873 DRM component master with the vendor-confirmed direct
 primary path `OVL0 -> RDMA0 -> DSI0`. It also adds the vendor-defined
@@ -226,12 +226,35 @@ DTB sha256       81c7fe8024106e657f51bf338869d439f979f97790003744bb98b91568187b2
 The recovery-only V62 image passed 59 static checks and has SHA-256
 `0eb1ddfebced6c4ab3dfec2ca6534e4e68d405814eb8c47b0ed20b6d751db41f`.
 It writes a white frame through `/dev/fb0` under both a write timeout and an
-independent 60-second watchdog. The flasher dry-run passed; the image has not
-yet been written to the phone.
+independent 60-second watchdog.
+
+V62 was written and tested on hardware. OVL0, OVL0-2L, RDMA0, DSI, DSI PHY and
+the panel all bound, and all three memory consumers remained in IOMMU group 0.
+The DRM master did not bind:
+
+```text
+mediatek-drm mediatek-drm.7.auto: Adding component match for /soc/ovl@14005000
+mediatek-drm mediatek-drm.7.auto: Adding component match for /soc/rdma@14007000
+mediatek-drm mediatek-drm.7.auto: Adding component match for /soc/dsi@14010000
+mediatek-drm mediatek-drm.7.auto: Failed to find disp-mutex node
+```
+
+Consequently `drm_master_driver=unbound`, `drm_card_device=absent` and no white
+frame was written. The directly observed failure matches a missing
+`mediatek,mt6873-disp-mutex` entry in `mtk_ddp_comp_dt_ids[]`: patch 0023 made
+the mutex driver match the node, but the DRM master could not classify that node
+as `MTK_DISP_MUTEX`. Patch 0038 adds the missing mapping and the topology
+checker now rejects its absence. This is a source-level root-cause fix until a
+new image is built and tested.
+
+The original recovery was restored and revalidated as
+`6a24c75e809bbae2dc062a91d922171a11cba261f6b0071bc93099ad73bd0fd6`;
+`boot`, `misc` and `dtbo` retained their original hashes.
 
 ## Pending
 
-- Stage C2b DRM master and first-frame hardware validation;
+- build and validate a new recovery-only image with patch 0038;
+- Stage C2b DRM master bind and first-frame hardware validation;
 - full DRM component chain and routing;
 - MT6873 SMI traffic validation, LARB0 WRR handling and legacy IOMMU bank
   fault-reporting;

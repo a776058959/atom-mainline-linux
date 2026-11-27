@@ -820,6 +820,21 @@ def check_mutex_consumer(dts, patch_root):
                 "[FATAL] 0023 missing MT6873 mutex source marker: " + marker
             )
 
+    mapping_patch = (
+        Path(patch_root)
+        / "0038-drm-mediatek-map-mt6873-disp-mutex-v6.18.patch"
+    ).read_text(encoding="utf-8")
+    mapping_pattern = re.compile(
+        r'^\+\s*\{ \.compatible = "mediatek,mt6873-disp-mutex",\s*$'
+        r"\r?\n"
+        r"^\+\s*\.data = \(void \*\)MTK_DISP_MUTEX \},$",
+        flags=re.M,
+    )
+    if not mapping_pattern.search(mapping_patch):
+        raise SystemExit(
+            "[FATAL] 0038 missing MT6873 DRM mutex component mapping"
+        )
+
     power_patch = (
         Path(patch_root)
         / "0024-pmdomain-mediatek-log-power-on-failures-v6.18.patch"

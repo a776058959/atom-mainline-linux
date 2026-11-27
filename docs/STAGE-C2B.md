@@ -131,5 +131,39 @@ framebuffer only when `/dev/fb0` exists, snapshots the connector/clock state,
 and retains a 60-second watchdog around the write and a 15-second framebuffer
 write timeout.
 
-The flasher dry-run passed against the current Android device and the original
-recovery/protected partition hashes. The image has not yet been written.
+## V62 hardware result
+
+V62 was written to the recovery partition and booted. The directly observed
+state was:
+
+- OVL0, OVL0-2L, RDMA0, DSI, DSI PHY and the panel driver bound;
+- SMI, LARB and IOMMU providers stayed bound;
+- OVL0, OVL0-2L and RDMA0 remained in IOMMU group 0 with type `DMA`;
+- no display driver Oops, BUG, warning, probe failure or deferred probe;
+- the DRM master did not bind and no DRM card or framebuffer device appeared.
+
+The decisive log lines were:
+
+```text
+mediatek-drm mediatek-drm.7.auto: Adding component match for /soc/ovl@14005000
+mediatek-drm mediatek-drm.7.auto: Adding component match for /soc/rdma@14007000
+mediatek-drm mediatek-drm.7.auto: Adding component match for /soc/dsi@14010000
+mediatek-drm mediatek-drm.7.auto: Failed to find disp-mutex node
+```
+
+`mtk_drm_probe()` classifies sibling nodes through `mtk_ddp_comp_dt_ids[]`.
+Patch 0023 added the MT6873 mutex compatible to the mutex driver and binding,
+but the DRM-local table had no corresponding `MTK_DISP_MUTEX` entry. The mutex
+node therefore could not become `private->mutex_node`, and probe returned
+`-ENODEV`. Patch 0038 adds only that mapping.
+
+The absence of a white frame is explained by the failed DRM bind and is not
+evidence about panel timing, DSI PLL lock or RDMA traffic. The original recovery
+was restored and hash-verified after log collection.
+
+Evidence:
+
+```text
+D:\820Linux\dumps\drm-pipeline-v62-20261127\20261127-233135\
+console-ramoops-2 sha256 eab0343daf7af3d804f896c45e1ac9f7bc7c67570e892430e924d4340c961539
+```

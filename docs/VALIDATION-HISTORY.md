@@ -136,6 +136,28 @@ verified afterward.
 This does not prove DMA mapping, TLB invalidation, RDMA/OVL traffic, a DRM
 modeset or visible output.
 
+## Display Stage C2b V62
+
+V62 registered MT6873 MMSYS as a DRM component master and enabled the direct
+`OVL0 -> RDMA0 -> DSI0` path. The kernel bound OVL0, OVL0-2L, RDMA0, DSI, DSI
+PHY and the panel, and kept the three memory consumers in IOMMU group 0. It
+reported no display probe failure, deferred probe or kernel fault.
+
+DRM bind nevertheless failed:
+
+```text
+mediatek-drm mediatek-drm.7.auto: Failed to find disp-mutex node
+```
+
+No DRM card, DRM node, framebuffer node or visible white frame followed. The
+source audit found that patch 0023 registered the MT6873 mutex with its own
+driver but did not add the compatible to `mtk_ddp_comp_dt_ids[]` in
+`mtk_drm_drv.c`. Patch 0038 adds that single DRM component mapping.
+
+V62 therefore proves the provider, panel-attachment and IOMMU topology at the
+point before DRM bind. It does not prove mutex programming, modeset, DMA
+mapping, RDMA/OVL traffic, DSI PLL lock or panel output.
+
 ## Evidence discipline
 
 Historical test images intentionally ended in a controlled panic so pstore
