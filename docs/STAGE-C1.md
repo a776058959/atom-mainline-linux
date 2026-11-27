@@ -77,3 +77,39 @@ MT8192 hardware operations and the following vendor-confirmed properties:
 
 Successful probe and compilation remain separate from those functional tests.
 Hardware verification requires a separately authorized recovery-only image.
+
+## Public CI result
+
+`DT Check` run `45947473666` completed successfully:
+
+- all 35 patches applied to a clean Linux `v6.18.59` tree;
+- the focused topology checker passed;
+- `dt_binding_check` passed;
+- the single-DTB `dtbs_check` passed;
+- both logs contained no warning, error or schema message;
+- `__symbols__` remained in the generated DTB.
+
+`Build Mainline` run `45947477132` also completed successfully:
+
+- `CONFIG_MTK_IOMMU=y` survived `olddefconfig`;
+- `drivers/iommu/mtk_iommu.o` was compiled;
+- `vmlinux`, `Image.gz` and the atom DTB linked and packed successfully;
+- `build-mainline.log` contained no compiler warning or error.
+
+Generated outputs:
+
+```text
+Image.gz size    15298656
+Image.gz sha256  84c5d3f222a3aa0c02c6ce903799824d9689bdea84db7188a624016772ad7dd6
+
+DTB size         59682
+DTB sha256       59e62d69a097639567b9902aa506c53d27d1c6ae282309409a39702d1e300e2e
+```
+
+The DTB still has 337 nodes. Its only semantic board change relative to C0 is
+the `/soc/m4u@1401d000` properties. DTC renumbered phandles throughout the
+tree because the IOMMU node now references two LARBs; those phandle-only
+changes do not alter the referenced nodes.
+
+This proves compilation, DTB assembly and schema conformance. It does not
+prove that the IOMMU probed on the phone.
