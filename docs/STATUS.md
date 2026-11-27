@@ -149,6 +149,11 @@ The initial recovery diagnostics had `CONFIG_PSTORE_CONSOLE=n`,
 not preserve its log. The config fragment and build gate now force all three
 to `y`; the next hardware run uses this rebuilt kernel.
 
+The first pstore-enabled run then caught the IOMMU probe bug directly:
+`mtk_iommu_probe+0x248` dereferenced a null shared page-table list because the
+MT6873 data inherited `SHARE_PGTABLE` without `.hw_list`. The single main
+IOMMU no longer enables that flag; hardware probe must be rerun after rebuild.
+
 ## Pending
 
 - full DRM/OVL/RDMA chain;
