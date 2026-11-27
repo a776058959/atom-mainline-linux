@@ -132,7 +132,6 @@ UNSUPPORTED_INHERITED_CONSUMERS = (
     "ovl_2l2",
     "rdma4",
     "iommu0",
-    "mipi_tx0",
     "imgsys",
     "larb9",
     "imgsys2",
@@ -677,7 +676,7 @@ def check_display_probe_dts(dts, patch_root):
             'compatible = "mediatek,mt6873-mipi-tx"',
             "clocks = <&clk26m>",
             'clock-output-names = "mipi_tx0_pll"',
-            'status = "disabled"',
+            'status = "okay"',
         ),
     )
 
@@ -699,15 +698,28 @@ def check_display_probe_dts(dts, patch_root):
             'clock-names = "engine", "digital", "hs"',
             "power-domains = <&spm ATOM_MT6873_POWER_DOMAIN_DIS>",
             'phy-names = "dphy"',
-            'status = "disabled"',
+            'status = "okay"',
+        ),
+    )
+    panel = extract_braced_body(
+        dsi,
+        r"^\s*panel@0\s*\{",
+        "S6E8FC01 panel child",
+    )
+    require_tokens(
+        "S6E8FC01 panel child",
+        panel,
+        (
             'compatible = "samsung,s6e8fc01"',
             "power-supply = <&mt6359_vibr_ldo_reg>",
             "enable-gpios = <&pio 29 GPIO_ACTIVE_HIGH>",
             "reset-gpios = <&pio 42 GPIO_ACTIVE_HIGH>",
+            'status = "okay"',
             "remote-endpoint = <&dsi_out>",
-            "remote-endpoint = <&panel_in>",
         ),
     )
+    if "remote-endpoint = <&panel_in>" not in dsi:
+        raise SystemExit("[FATAL] DSI output 未连接到 S6E8FC01 panel")
     if re.search(r"\bresets\s*=", dsi):
         raise SystemExit(
             "[FATAL] DSI probe topology 不得猜测 MMSYS reset 映射"
