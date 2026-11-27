@@ -65,6 +65,18 @@ EXPECTED_CLOCK_MACROS = {
         "CLK_MM_DISP_MUTEX0",
         1,
     ),
+    "ATOM_MT6873_CLK_MM_DISP_OVL0": (
+        "CLK_MM_DISP_OVL0",
+        3,
+    ),
+    "ATOM_MT6873_CLK_MM_DISP_RDMA0": (
+        "CLK_MM_DISP_RDMA0",
+        4,
+    ),
+    "ATOM_MT6873_CLK_MM_DISP_OVL0_2L": (
+        "CLK_MM_DISP_OVL0_2L",
+        5,
+    ),
     "ATOM_MT6873_CLK_MM_SMI_INFRA": (
         "CLK_MM_SMI_INFRA",
         12,
@@ -117,9 +129,6 @@ UNSUPPORTED_INHERITED_CONSUMERS = (
     "audsys",
     "afe",
     "mfgcfg",
-    "ovl0",
-    "ovl_2l0",
-    "rdma0",
     "color0",
     "ccorr0",
     "aal0",
@@ -968,6 +977,126 @@ def check_smi_providers(dts, patch_root):
         )
 
 
+def check_display_pipeline_providers(dts, base, patch_root):
+    clean = strip_comments(dts)
+
+    mipi_tx = extract_braced_body(
+        clean,
+        r"^\s*&mipi_tx0\s*\{",
+        "MT6873 MIPI TX provider",
+    )
+    require_tokens(
+        "MT6873 MIPI TX provider",
+        mipi_tx,
+        ('status = "okay"',),
+    )
+
+    for label, expected_compatible in (
+        ("ovl0", "mediatek,mt6873-disp-ovl"),
+        ("ovl_2l0", "mediatek,mt6873-disp-ovl-2l"),
+        ("rdma0", "mediatek,mt6873-disp-rdma"),
+    ):
+        body = extract_braced_body(
+            clean,
+            r"^\s*&{}\s*\{{".format(re.escape(label)),
+            "MT6873 {} provider".format(label),
+        )
+        normalized = re.sub(r"\s+", " ", body)
+        require_tokens(
+            "MT6873 {} provider".format(label),
+            normalized,
+            (
+                'compatible = "{}"'.format(expected_compatible),
+                'power-domains = <&spm ATOM_MT6873_POWER_DOMAIN_DIS>',
+                'status = "okay"',
+            ),
+        )
+        if label == "ovl0":
+            clock = "ATOM_MT6873_CLK_MM_DISP_OVL0"
+            fallback = "mediatek,mt8192-disp-ovl"
+        elif label == "ovl_2l0":
+            clock = "ATOM_MT6873_CLK_MM_DISP_OVL0_2L"
+            fallback = "mediatek,mt8192-disp-ovl-2l"
+        else:
+            clock = "ATOM_MT6873_CLK_MM_DISP_RDMA0"
+            fallback = "mediatek,mt8183-disp-rdma"
+        require_tokens(
+            "MT6873 {} provider".format(label),
+            normalized,
+            (
+                '"{}"'.format(fallback),
+                "clocks = <&mmsys {}>".format(clock),
+            ),
+        )
+
+    for label in ("ovl0", "rdma0"):
+        body = extract_braced_body(
+            clean,
+            r"^\s*&{}\s*\{{".format(re.escape(label)),
+            "MT6873 {} graph stub".format(label),
+        )
+        ports = extract_braced_body(
+            body,
+            r"^\s*ports\s*\{",
+            "MT6873 {} graph ports".format(label),
+        )
+        require_tokens(
+            "MT6873 {} graph ports".format(label),
+            ports,
+            (
+                "#address-cells = <1>",
+                "#size-cells = <0>",
+                "port@0",
+                "port@1",
+            ),
+        )
+        if "endpoint" in ports or "remote-endpoint" in ports:
+            raise SystemExit(
+                "[FATAL] Stage C2a {} graph must remain an empty binding "
+                "stub".format(label)
+            )
+
+    base_tokens = (
+        "reg = <0 0x14005000 0 0x1000>",
+        "GIC_SPI 254 IRQ_TYPE_LEVEL_HIGH",
+        "M4U_PORT_L0_OVL_RDMA0",
+        "M4U_PORT_L0_OVL_RDMA0_HDR",
+        "reg = <0 0x14006000 0 0x1000>",
+        "GIC_SPI 255 IRQ_TYPE_LEVEL_HIGH",
+        "M4U_PORT_L1_OVL_2L_RDMA0",
+        "M4U_PORT_L1_OVL_2L_RDMA0_HDR",
+        "reg = <0 0x14007000 0 0x1000>",
+        "GIC_SPI 256 IRQ_TYPE_LEVEL_HIGH",
+        "M4U_PORT_L0_DISP_RDMA0",
+        "mediatek,rdma-fifo-size = <5120>",
+        "mediatek,gce-client-reg = <&gce SUBSYS_1400XXXX 0x5000 0x1000>",
+        "mediatek,gce-client-reg = <&gce SUBSYS_1400XXXX 0x6000 0x1000>",
+        "mediatek,gce-client-reg = <&gce SUBSYS_1400XXXX 0x7000 0x1000>",
+    )
+    require_tokens("MT8192 display resource reference", base, base_tokens)
+
+    binding_patch = (
+        Path(patch_root)
+        / (
+            "0036-dt-bindings-drm-mediatek-add-mt6873-display-"
+            "fallbacks-v6.18.patch"
+        )
+    ).read_text(encoding="utf-8")
+    for marker in (
+        "+          - const: mediatek,mt6873-disp-ovl",
+        "+          - const: mediatek,mt8192-disp-ovl",
+        "+          - const: mediatek,mt6873-disp-ovl-2l",
+        "+          - const: mediatek,mt8192-disp-ovl-2l",
+        "+          - const: mediatek,mt6873-disp-rdma",
+        "+          - const: mediatek,mt8183-disp-rdma",
+    ):
+        if marker not in binding_patch:
+            raise SystemExit(
+                "[FATAL] 0036 missing MT6873 display fallback marker: "
+                + marker
+            )
+
+
 def check_unsupported_inherited_consumers(dts):
     clean = strip_comments(dts)
 
@@ -1503,13 +1632,14 @@ def main():
     check_display_probe_dts(dts, args.patch_root)
     check_mutex_consumer(dts, args.patch_root)
     check_smi_providers(dts, args.patch_root)
+    check_display_pipeline_providers(dts, base, args.patch_root)
     check_unsupported_inherited_consumers(dts)
     check_vendor_dtbo_symbols(dts, base)
     check_i2c5_mt6360(dts, args.patch_root)
     check_topology(dts)
     print(
-        "[ok] MT6873 formal DTS USB/UFS/I2C5/SMI/IOMMU topology and "
-        "evidence checks passed"
+        "[ok] MT6873 formal DTS USB/UFS/I2C5/SMI/IOMMU/OVL/RDMA topology "
+        "and evidence checks passed"
     )
 
 

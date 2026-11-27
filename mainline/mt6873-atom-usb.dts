@@ -55,6 +55,9 @@
 #define ATOM_MT6873_CLK_IMP_IIC_WRAP_W_AP_I2C5_CG_RO	1
 #define ATOM_MT6873_CLK_TOP_MUX_DISP		5
 #define ATOM_MT6873_CLK_MM_DISP_MUTEX0		1
+#define ATOM_MT6873_CLK_MM_DISP_OVL0		3
+#define ATOM_MT6873_CLK_MM_DISP_RDMA0		4
+#define ATOM_MT6873_CLK_MM_DISP_OVL0_2L		5
 #define ATOM_MT6873_CLK_MM_SMI_INFRA		12
 #define ATOM_MT6873_CLK_MM_DSI0			16
 #define ATOM_MT6873_CLK_MM_SMI_COMMON		18
@@ -530,9 +533,64 @@
 	status = "okay";
 };
 
-&ovl0 { status = "disabled"; };
-&ovl_2l0 { status = "disabled"; };
-&rdma0 { status = "disabled"; };
+/*
+ * Stage C2a probes the three OVL/RDMA components after their clocks, DIS
+ * power domain and IOMMU masters have been identified. The empty graph ports
+ * satisfy the current display bindings without declaring a live route. The
+ * MT6873 MMSYS node is not yet registered as a DRM component master, so these
+ * providers cannot start scanout in this stage.
+ */
+&ovl0 {
+	compatible = "mediatek,mt6873-disp-ovl",
+		     "mediatek,mt8192-disp-ovl";
+	clocks = <&mmsys ATOM_MT6873_CLK_MM_DISP_OVL0>;
+	power-domains = <&spm ATOM_MT6873_POWER_DOMAIN_DIS>;
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+		};
+
+		port@1 {
+			reg = <1>;
+		};
+	};
+
+	status = "okay";
+};
+
+&ovl_2l0 {
+	compatible = "mediatek,mt6873-disp-ovl-2l",
+		     "mediatek,mt8192-disp-ovl-2l";
+	clocks = <&mmsys ATOM_MT6873_CLK_MM_DISP_OVL0_2L>;
+	power-domains = <&spm ATOM_MT6873_POWER_DOMAIN_DIS>;
+	status = "okay";
+};
+
+&rdma0 {
+	compatible = "mediatek,mt6873-disp-rdma",
+		     "mediatek,mt8183-disp-rdma";
+	clocks = <&mmsys ATOM_MT6873_CLK_MM_DISP_RDMA0>;
+	power-domains = <&spm ATOM_MT6873_POWER_DOMAIN_DIS>;
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+		};
+
+		port@1 {
+			reg = <1>;
+		};
+	};
+
+	status = "okay";
+};
 &color0 { status = "disabled"; };
 &ccorr0 { status = "disabled"; };
 &aal0 { status = "disabled"; };
