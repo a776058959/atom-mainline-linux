@@ -101,7 +101,7 @@ Observed:
 Probe does not run panel prepare/display-on. Screen output remains a later
 stage.
 
-### Stage C0: SMI provider probe compile/schema-verified, not hardware-verified
+### Stage C0: SMI provider probe complete on hardware
 
 The inherited MT8192 SMI common and LARB0/LARB1 nodes are replaced with
 MT6873-specific providers at the same addresses. MT6873 register defaults,
@@ -121,9 +121,11 @@ DTB sha256       b333db80ed5bf9a46a62c1a61658df3fb0e4df879c349ceb87e85782db94a7d
 ```
 
 The DTB still has 337 nodes; only the reviewed SMI common/LARB0/LARB1 nodes
-changed relative to Stage B. Hardware provider probe has not been run.
+changed relative to Stage B. Later Stage C1 hardware diagnostics directly
+observed `14002000.smi` bound to `mtk-smi-common` and both reviewed LARBs bound
+to `mtk-smi-larb`, with no deferred-probe entry.
 
-### Stage C1: main IOMMU provider compile/schema-verified, not hardware-verified
+### Stage C1: main IOMMU provider probe complete on hardware
 
 The inherited MT8192 IOMMU node is replaced with `mediatek,mt6873-m4u` at the
 vendor-confirmed main address. This stage intentionally uses one bank and one
@@ -142,7 +144,7 @@ DTB sha256       59e62d69a097639567b9902aa506c53d27d1c6ae282309409a39702d1e300e2
 ```
 
 The DTB still has 337 nodes. Hardware IOMMU probe, DMA mapping, TLB behavior
-and fault handling have not been run.
+and traffic behavior were initially not tested.
 
 The initial recovery diagnostics had `CONFIG_PSTORE_CONSOLE=n`,
 `CONFIG_PSTORE_PMSG=n` and `CONFIG_PSTORE_RAM=m`, so a successful run could
@@ -152,14 +154,26 @@ to `y`; the next hardware run uses this rebuilt kernel.
 The first pstore-enabled run then caught the IOMMU probe bug directly:
 `mtk_iommu_probe+0x248` dereferenced a null shared page-table list because the
 MT6873 data inherited `SHARE_PGTABLE` without `.hw_list`. The single main
-IOMMU no longer enables that flag; hardware probe must be rerun after rebuild.
+IOMMU no longer enables that flag.
+
+The rebuilt recovery-only image then completed the provider probe:
+
+- `14002000.smi` bound `mtk-smi-common`;
+- `14003000.larb` and `14004000.larb` bound `mtk-smi-larb`;
+- `1401d000.m4u` bound `mtk-iommu`;
+- both LARBs bound as IOMMU components;
+- no SMI/IOMMU deferred-probe entry was captured.
+
+The providers remained runtime-suspended because no device consumes
+`#iommu-cells` yet. This does not prove DMA mapping, TLB operations, fault
+recovery, SMI traffic or display output.
 
 ## Pending
 
 - full DRM/OVL/RDMA chain;
 - MT6873 SMI traffic validation, LARB0 WRR handling and legacy IOMMU bank
   fault-reporting;
-- IOMMU bank selection, DMA mapping, TLB fault/recovery and suspend/resume;
+- IOMMU DMA mapping, TLB fault/recovery and suspend/resume;
 - GPU/Panfrost;
 - camera, audio, video codec and other multimedia blocks;
 - full pinmux/eINT lifecycle validation;

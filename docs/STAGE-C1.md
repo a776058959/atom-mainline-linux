@@ -111,8 +111,7 @@ the `/soc/m4u@1401d000` properties. DTC renumbered phandles throughout the
 tree because the IOMMU node now references two LARBs; those phandle-only
 changes do not alter the referenced nodes.
 
-This proves compilation, DTB assembly and schema conformance. It does not
-prove that the IOMMU probed on the phone.
+This proves compilation, DTB assembly and schema conformance.
 
 ## Recovery diagnostics correction
 
@@ -136,7 +135,7 @@ The config fragment now pins all three to `y`, and the build workflow rejects
 the kernel if they regress. A Stage B kernel with the same V60 initramfs
 reached init at 1.036 seconds, took both snapshots, cancelled its watchdog and
 completed the controlled panic. This proves the V60 user-space diagnostic
-itself; C0/C1 probe evidence still requires a pstore-enabled rebuild.
+itself. The corrected pstore-enabled kernel build is run `45977659389`.
 
 The first pstore-enabled C1 run exposed the real IOMMU fault before init:
 
@@ -153,3 +152,33 @@ multi-IOMMU `.hw_list`; probe reached
 Stage C1 registers only the main display IOMMU, so `SHARE_PGTABLE` is not
 applicable and has been removed. The checker now rejects that flag until a
 separate multi-IOMMU topology provides a valid shared list.
+
+## Hardware result
+
+After the fix was rebuilt with persistent logging, the V60 recovery-only image
+completed the provider-probe gate:
+
+```text
+kernel sha256  10c53fb017f3861e5ed8d4779dc51ffe08cd6241dc1c99a6eb0f5350fa4208da
+DTB sha256     59e62d69a097639567b9902aa506c53d27d1c6ae282309409a39702d1e300e2e
+image sha256   a89e7bbc71516fe1137526df1ce244cea9bf3835983312b6ede08048dfb31b50
+log sha256     314e57be1600c5b550b18f7cac8abf5d2698c7111795953f7e2c8da0c998c290
+```
+
+Directly observed:
+
+- init started at 1.045 seconds with marker `ATOM-DIAG-V60`;
+- `14002000.smi` bound `mtk-smi-common`;
+- `14003000.larb` and `14004000.larb` bound `mtk-smi-larb`;
+- `1401d000.m4u` bound `mtk-iommu`;
+- the IOMMU logged successful component binding for both LARB devices;
+- no SMI/IOMMU deferred-probe entry appeared;
+- both diagnostic snapshots completed and the controlled panic was captured.
+
+The SMI common, both LARBs and the main IOMMU remained runtime-suspended,
+consistent with provider probe and no display traffic. `iommu_groups=none`
+is expected because no device currently has an `iommus` property.
+
+This proves DT delivery, provider matching, driver binding and IOMMU component
+links. It does not prove DMA mapping, TLB invalidation, fault recovery, SMI
+bank selection under traffic, suspend/resume, OVL/RDMA operation or pixels.
