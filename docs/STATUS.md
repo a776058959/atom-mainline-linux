@@ -80,7 +80,7 @@ Observed:
 
 This is not proof of PLL lock, DSI packet transfer or screen output.
 
-### Stage B: prepared, not hardware-verified
+### Stage B: complete on hardware
 
 The panel probe stage changes only `panel@0` to `okay`. It is intended to
 verify:
@@ -97,8 +97,22 @@ The public `DT Check` workflow run `45933305710` on
 has SHA-256
 `f0882fc50772625adfb21fd148a00b753f528a26f6bdf6d9790a304f96a73900`.
 It differs from the hardware-tested Stage A DTB only by the panel status
-property. A recovery-only image passed 43 local assembly checks, but has not
-been flashed or booted.
+property. The recovery-only image passed 43 local assembly checks and was then
+validated on hardware.
+
+Observed:
+
+- `14010000.dsi.0` bound `panel-samsung-s6e8fc01`;
+- the panel held the VIBR regulator consumer without enabling it
+  (`use=0 open=1`, 3.0 V);
+- GPIO29 `enable` and GPIO42 `reset` were acquired and remained low;
+- successful panel probe proves `mipi_dsi_attach()` returned zero;
+- the PHY/DSI IRQ/clocks/power domain remained healthy;
+- the MIPI PLL stayed off, as expected before panel power-on;
+- no panel probe failure or deferred-probe entry appeared.
+
+This remains probe/attach evidence, not a first frame. Panel prepare, PLL
+lock, DSI transfer and scanout belong to Stage C.
 
 ## Pending
 
