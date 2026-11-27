@@ -1097,6 +1097,55 @@ def check_display_pipeline_providers(dts, base, patch_root):
             )
 
 
+def check_drm_component_master(patch_root):
+    patch_path = (
+        Path(patch_root)
+        / "0037-drm-mediatek-add-mt6873-direct-display-path-v6.18.patch"
+    )
+    patch = patch_path.read_text(encoding="utf-8")
+    for marker in (
+        "+static const unsigned int mt6873_mtk_ddp_main[] = {",
+        "+\tDDP_COMPONENT_OVL0,",
+        "+\tDDP_COMPONENT_RDMA0,",
+        "+\tDDP_COMPONENT_DSI0,",
+        "+static const struct mtk_mmsys_driver_data "
+        "mt6873_mmsys_driver_data = {",
+        "+\t.main_path = mt6873_mtk_ddp_main,",
+        "+\t.main_len = ARRAY_SIZE(mt6873_mtk_ddp_main),",
+        "+\t.mmsys_dev_num = 1,",
+        "+\t{ .compatible = \"mediatek,mt6873-mmsys\",",
+        "+\t  .data = &mt6873_mmsys_driver_data},",
+    ):
+        if marker not in patch:
+            raise SystemExit(
+                "[FATAL] 0037 missing MT6873 DRM master marker: " + marker
+            )
+
+    path_match = re.search(
+        r"\+static const unsigned int mt6873_mtk_ddp_main\[\] = "
+        r"\{(?P<body>.*?)\n\+};",
+        patch,
+        flags=re.S,
+    )
+    if not path_match:
+        raise SystemExit("[FATAL] 0037 MT6873 DRM path is malformed")
+    added_path = path_match.group("body")
+    allowed = {
+        "DDP_COMPONENT_OVL0",
+        "DDP_COMPONENT_RDMA0",
+        "DDP_COMPONENT_DSI0",
+    }
+    found = set(
+        re.findall(r"DDP_COMPONENT_[A-Z0-9_]+", added_path)
+    )
+    if found != allowed:
+        raise SystemExit(
+            "[FATAL] 0037 direct MT6873 path changed: {}".format(
+                sorted(found)
+            )
+        )
+
+
 def check_unsupported_inherited_consumers(dts):
     clean = strip_comments(dts)
 
@@ -1633,13 +1682,14 @@ def main():
     check_mutex_consumer(dts, args.patch_root)
     check_smi_providers(dts, args.patch_root)
     check_display_pipeline_providers(dts, base, args.patch_root)
+    check_drm_component_master(args.patch_root)
     check_unsupported_inherited_consumers(dts)
     check_vendor_dtbo_symbols(dts, base)
     check_i2c5_mt6360(dts, args.patch_root)
     check_topology(dts)
     print(
-        "[ok] MT6873 formal DTS USB/UFS/I2C5/SMI/IOMMU/OVL/RDMA topology "
-        "and evidence checks passed"
+        "[ok] MT6873 formal DTS USB/UFS/I2C5/SMI/IOMMU/OVL/RDMA/DRM "
+        "topology and evidence checks passed"
     )
 
 
