@@ -1,0 +1,11 @@
+diff --git a/Documentation/devicetree/bindings/phy/mediatek,tphy.yaml b/Documentation/devicetree/bindings/phy/mediatek,tphy.yaml
+--- a/Documentation/devicetree/bindings/phy/mediatek,tphy.yaml
++++ b/Documentation/devicetree/bindings/phy/mediatek,tphy.yaml
+@@ -78,6 +78,7 @@
+       - items:
+           - enum:
+               - mediatek,mt2712-tphy
++              - mediatek,mt6873-tphy
+               - mediatek,mt6893-tphy
+               - mediatek,mt7629-tphy
+               - mediatek,mt7986-tphy

@@ -1,0 +1,59 @@
+diff --git a/drivers/gpu/drm/mediatek/mtk_dsi.c b/drivers/gpu/drm/mediatek/mtk_dsi.c
+--- a/drivers/gpu/drm/mediatek/mtk_dsi.c
++++ b/drivers/gpu/drm/mediatek/mtk_dsi.c
+@@ -188,8 +188,9 @@ struct mtk_dsi_driver_data {
+ 	const u32 reg_vm_cmd_off;
+ 	const u32 reg_shadow_dbg_off;
+ 	bool bypass_shadow;
+ 	bool has_shadow_ctl;
+ 	bool has_size_ctl;
+ 	bool cmdq_long_packet_ctl;
+ 	bool support_per_frame_lp;
++	bool use_peripheral_hs_rate;
+ };
+@@ -199,5 +200,6 @@ struct mtk_dsi {
+ 	struct device *dev;
+ 	struct mipi_dsi_host host;
++	struct mipi_dsi_device *peripheral;
+ 	struct drm_encoder encoder;
+ 	struct drm_bridge bridge;
+ 	struct drm_bridge *next_bridge;
+@@ -691,7 +693,12 @@ static int mtk_dsi_poweron(struct mtk_dsi *dsi)
+ 	bit_per_pixel = ret;
+ 
+-	dsi->data_rate = DIV_ROUND_UP_ULL(dsi->vm.pixelclock * bit_per_pixel,
+-					  dsi->lanes);
++	if (dsi->driver_data->use_peripheral_hs_rate &&
++	    dsi->peripheral && dsi->peripheral->hs_rate) {
++		dsi->data_rate = dsi->peripheral->hs_rate;
++	} else {
++		dsi->data_rate = DIV_ROUND_UP_ULL(dsi->vm.pixelclock * bit_per_pixel,
++						  dsi->lanes);
++	}
+ 
+ 	ret = clk_set_rate(dsi->hs_clk, dsi->data_rate);
+ 	if (ret < 0) {
+@@ -983,6 +990,7 @@ static int mtk_dsi_host_attach(struct mipi_dsi_host *host,
+ 	struct device *dev = host->dev;
+ 	int ret;
+ 
++	dsi->peripheral = device;
+ 	dsi->lanes = device->lanes;
+ 	dsi->format = device->format;
+ 	dsi->mode_flags = device->mode_flags;
+@@ -1020,6 +1028,7 @@ static int mtk_dsi_host_detach(struct mipi_dsi_host *host,
+ 
+ 	component_del(host->dev, &mtk_dsi_component_ops);
+ 	drm_bridge_remove(&dsi->bridge);
++	dsi->peripheral = NULL;
+ 	return 0;
+ }
+ 
+@@ -1272,6 +1281,7 @@ static const struct mtk_dsi_driver_data mt6873_dsi_driver_data = {
+ 	.reg_shadow_dbg_off = 0x190,
+ 	.bypass_shadow = true,
+ 	.has_size_ctl = true,
++	.use_peripheral_hs_rate = true,
+ };
+ 
+ static const struct mtk_dsi_driver_data mt2701_dsi_driver_data = {

@@ -1,0 +1,112 @@
+diff --git a/drivers/usb/typec/tcpm/tcpci.c b/drivers/usb/typec/tcpm/tcpci.c
+index 3be5d3f..43692f7 100644
+--- a/drivers/usb/typec/tcpm/tcpci.c
++++ b/drivers/usb/typec/tcpm/tcpci.c
+@@ -712,6 +712,13 @@ static int tcpci_init(struct tcpc_dev *tcpc)
+ 	return 0;
+ }
+ 
++int tcpci_enable_alert_mask(struct tcpci *tcpci, bool enable)
++{
++	return tcpci_write16(tcpci, TCPC_ALERT_MASK,
++			     enable ? tcpci->alert_mask : 0);
++}
++EXPORT_SYMBOL_GPL(tcpci_enable_alert_mask);
++
+ irqreturn_t tcpci_irq(struct tcpci *tcpci)
+ {
+ 	u16 status;
+@@ -955,7 +962,7 @@ static int tcpci_probe(struct i2c_client *client)
+ 		goto unregister_port;
+ 
+ 	/* Enable chip interrupts at last */
+-	err = tcpci_write16(chip->tcpci, TCPC_ALERT_MASK, chip->tcpci->alert_mask);
++	err = tcpci_enable_alert_mask(chip->tcpci, true);
+ 	if (err < 0)
+ 		goto unregister_port;
+ 
+@@ -974,7 +981,7 @@ static void tcpci_remove(struct i2c_client *client)
+ 	int err;
+ 
+ 	/* Disable chip interrupts before unregistering port */
+-	err = tcpci_write16(chip->tcpci, TCPC_ALERT_MASK, 0);
++	err = tcpci_enable_alert_mask(chip->tcpci, false);
+ 	if (err < 0)
+ 		dev_warn(&client->dev, "Failed to disable irqs (%pe)\n", ERR_PTR(err));
+ 
+@@ -990,7 +997,7 @@ static int tcpci_suspend(struct device *dev)
+ 	if (device_may_wakeup(dev))
+ 		ret = enable_irq_wake(i2c->irq);
+ 	else
+-		ret = tcpci_write16(chip->tcpci, TCPC_ALERT_MASK, 0);
++		ret = tcpci_enable_alert_mask(chip->tcpci, false);
+ 
+ 	return ret;
+ }
+@@ -1004,7 +1011,7 @@ static int tcpci_resume(struct device *dev)
+ 	if (device_may_wakeup(dev))
+ 		ret = disable_irq_wake(i2c->irq);
+ 	else
+-		ret = tcpci_write16(chip->tcpci, TCPC_ALERT_MASK, chip->tcpci->alert_mask);
++		ret = tcpci_enable_alert_mask(chip->tcpci, true);
+ 
+ 	return ret;
+ }
+diff --git a/drivers/usb/typec/tcpm/tcpci_mt6360.c b/drivers/usb/typec/tcpm/tcpci_mt6360.c
+index 881ffac..ce9cd7b 100644
+--- a/drivers/usb/typec/tcpm/tcpci_mt6360.c
++++ b/drivers/usb/typec/tcpm/tcpci_mt6360.c
+@@ -66,6 +66,13 @@ static int mt6360_tcpc_init(struct tcpci *tcpci, struct tcpci_data *tdata)
+ 	if (ret)
+ 		return ret;
+ 
++	/* Enable LOOK4CONNECTION alert */
++	ret = regmap_update_bits(regmap, TCPC_TCPC_CTRL,
++				 TCPC_TCPC_CTRL_EN_LK4CONN_ALRT,
++				 TCPC_TCPC_CTRL_EN_LK4CONN_ALRT);
++	if (ret)
++		return ret;
++
+ 	/* config I2C timeout reset enable , and timeout to 200ms */
+ 	ret = regmap_write(regmap, MT6360_REG_I2CTORST, 0x8F);
+ 	if (ret)
+@@ -172,6 +179,13 @@ static int mt6360_tcpc_probe(struct platform_device *pdev)
+ 		return ret;
+ 	}
+ 
++	ret = tcpci_enable_alert_mask(mti->tcpci, true);
++	if (ret) {
++		dev_err(mti->dev, "Failed to enable TCPC alerts: %d\n", ret);
++		tcpci_unregister_port(mti->tcpci);
++		return ret;
++	}
++
+ 	device_init_wakeup(&pdev->dev, true);
+ 	platform_set_drvdata(pdev, mti);
+ 
+@@ -181,8 +195,13 @@ static int mt6360_tcpc_probe(struct platform_device *pdev)
+ static void mt6360_tcpc_remove(struct platform_device *pdev)
+ {
+ 	struct mt6360_tcpc_info *mti = platform_get_drvdata(pdev);
++	int ret;
+ 
+ 	disable_irq(mti->irq);
++	ret = tcpci_enable_alert_mask(mti->tcpci, false);
++	if (ret)
++		dev_warn(mti->dev, "Failed to disable TCPC alerts: %d\n", ret);
++
+ 	tcpci_unregister_port(mti->tcpci);
+ }
+ 
+diff --git a/include/linux/usb/tcpci.h b/include/linux/usb/tcpci.h
+index 9b46a6b..adeee0a 100644
+--- a/include/linux/usb/tcpci.h
++++ b/include/linux/usb/tcpci.h
+@@ -232,6 +232,7 @@ struct tcpci_data {
+ 
+ struct tcpci *tcpci_register_port(struct device *dev, struct tcpci_data *data);
+ void tcpci_unregister_port(struct tcpci *tcpci);
++int tcpci_enable_alert_mask(struct tcpci *tcpci, bool enable);
+ irqreturn_t tcpci_irq(struct tcpci *tcpci);
+ 
+ struct tcpm_port;

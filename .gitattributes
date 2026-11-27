@@ -1,0 +1,8 @@
+* text=auto eol=lf
+*.patch -text -diff
+*.config text eol=lf
+*.dts text eol=lf
+*.md text eol=lf
+*.py text eol=lf
+*.txt text eol=lf
+*.yml text eol=lf

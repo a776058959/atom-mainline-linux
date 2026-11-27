@@ -1,0 +1,37 @@
+From: Codex <codex@localhost>
+Date: Fri, 21 Nov 2026 00:00:00 +0800
+Subject: [PATCH] dt-bindings: ufs: add MT6873 host fallback
+
+The MT6873 vendor UFS controller uses the same MMIO window and interrupt
+model exposed by the MediaTek UFS host driver.  Describe an MT6873-specific
+compatible with an MT8183 fallback so the integration can be tested without
+claiming that every undocumented controller feature is equivalent.
+
+This is a development binding for the atom bring-up branch, not evidence
+that UFS link, PHY calibration, crypto, MCQ, or runtime PM are functional.
+
+diff --git a/Documentation/devicetree/bindings/ufs/mediatek,ufs.yaml b/Documentation/devicetree/bindings/ufs/mediatek,ufs.yaml
+index 1dec54f..03397c0 100644
+--- a/Documentation/devicetree/bindings/ufs/mediatek,ufs.yaml
++++ b/Documentation/devicetree/bindings/ufs/mediatek,ufs.yaml
+@@ -10,10 +10,14 @@ maintainers:
+ 
+ properties:
+   compatible:
+-    enum:
+-      - mediatek,mt8183-ufshci
+-      - mediatek,mt8192-ufshci
+-      - mediatek,mt8195-ufshci
++    oneOf:
++      - items:
++          - const: mediatek,mt6873-ufshci
++          - const: mediatek,mt8183-ufshci
++      - enum:
++          - mediatek,mt8183-ufshci
++          - mediatek,mt8192-ufshci
++          - mediatek,mt8195-ufshci
+ 
+   clocks:
+     minItems: 1
+-- 
+2.43.0

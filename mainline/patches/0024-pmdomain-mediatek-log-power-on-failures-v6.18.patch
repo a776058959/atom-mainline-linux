@@ -1,0 +1,74 @@
+diff --git a/drivers/pmdomain/mediatek/mtk-pm-domains.c b/drivers/pmdomain/mediatek/mtk-pm-domains.c
+index 5b3752043..b378125de 100644
+--- a/drivers/pmdomain/mediatek/mtk-pm-domains.c
++++ b/drivers/pmdomain/mediatek/mtk-pm-domains.c
+@@ -404,8 +404,12 @@ static int scpsys_power_on(struct generic_pm_domain *genpd)
+ 		return ret;
+ 
+ 	ret = clk_bulk_prepare_enable(pd->num_clks, pd->clks);
+-	if (ret)
++	if (ret) {
++		dev_err(scpsys->dev,
++			"%s: failed to enable domain clocks: %d\n",
++			genpd->name, ret);
+ 		goto err_reg;
++	}
+ 
+ 	if (pd->data->ext_buck_iso_offs && MTK_SCPD_CAPS(pd, MTK_SCPD_EXT_BUCK_ISO))
+ 		regmap_clear_bits(scpsys->base, pd->data->ext_buck_iso_offs,
+@@ -416,8 +420,11 @@ static int scpsys_power_on(struct generic_pm_domain *genpd)
+ 	else
+ 		ret = scpsys_ctl_pwrseq_on(pd);
+ 
+-	if (ret)
++	if (ret) {
++		dev_err(scpsys->dev, "%s: failed to power on: %d\n",
++			genpd->name, ret);
+ 		goto err_pwr_ack;
++	}
+ 
+ 	/*
+ 	 * In few Mediatek platforms(e.g. MT6779), the bus protect policy is
+@@ -427,23 +434,38 @@ static int scpsys_power_on(struct generic_pm_domain *genpd)
+ 	if (!MTK_SCPD_CAPS(pd, MTK_SCPD_STRICT_BUS_PROTECTION)) {
+ 		ret = clk_bulk_prepare_enable(pd->num_subsys_clks,
+ 					      pd->subsys_clks);
+-		if (ret)
++		if (ret) {
++			dev_err(scpsys->dev,
++				"%s: failed to enable subsystem clocks: %d\n",
++				genpd->name, ret);
+ 			goto err_pwr_ack;
++		}
+ 	}
+ 
+ 	ret = scpsys_sram_enable(pd);
+-	if (ret < 0)
++	if (ret < 0) {
++		dev_err(scpsys->dev, "%s: failed to enable SRAM: %d\n",
++			genpd->name, ret);
+ 		goto err_disable_subsys_clks;
++	}
+ 
+ 	ret = scpsys_bus_protect_disable(pd);
+-	if (ret < 0)
++	if (ret < 0) {
++		dev_err(scpsys->dev,
++			"%s: failed to release bus protection: %d\n",
++			genpd->name, ret);
+ 		goto err_disable_sram;
++	}
+ 
+ 	if (MTK_SCPD_CAPS(pd, MTK_SCPD_STRICT_BUS_PROTECTION)) {
+ 		ret = clk_bulk_prepare_enable(pd->num_subsys_clks,
+ 					      pd->subsys_clks);
+-		if (ret)
++		if (ret) {
++			dev_err(scpsys->dev,
++				"%s: failed to enable subsystem clocks after bus unprotect: %d\n",
++				genpd->name, ret);
+ 			goto err_enable_bus_protect;
++		}
+ 	}
+ 
+ 	return 0;

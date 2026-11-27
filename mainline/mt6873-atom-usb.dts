@@ -1,0 +1,669 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Xiaomi Redmi 10X 5G (atom / MT6873) bring-up test DTS.
+ *
+ * This is a compile-time migration target for the hardware-tested v36
+ * injected-vendor-DT chain. It describes the validated USB2 peripheral path
+ * and the previously tested minimal UFS probe resources. It also contains a
+ * disabled MT6873 DSI/panel probe topology for the next display experiment;
+ * it is not yet a complete atom board description.
+ *
+ * MT8192 remains a structural reference only. MT6873 clock IDs, provider
+ * compatibles, pinctrl resources and T-PHY data are bound explicitly below.
+ */
+/dts-v1/;
+#include "mt8192.dtsi"
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/phy/phy.h>
+
+/*
+ * LK applies the stock atom dtbo after loading this DTB. The vendor
+ * fragments explicitly enable I2C6, SPI7 and DSI, and attach complex vendor
+ * children to I2C5. Merely leaving the inherited MT8192 nodes disabled is
+ * insufficient. Remove those nodes and move their fixup labels to disabled
+ * placeholders below. I2C5 is recreated as an unlabeled node with verified
+ * MT6873 resources so the vendor fragment cannot attach Android-only clients
+ * to the real bus.
+ */
+&{/soc} {
+	/delete-node/ dsi@14010000;
+	/delete-node/ i2c@11e00000;
+	/delete-node/ i2c@11f01000;
+	/delete-node/ spi@1101e000;
+};
+
+/*
+ * mt8192.dtsi and the MT6873 binding patches use the same unprefixed macro
+ * names with different values in several places. Keep this transitional
+ * overlay free of redefinitions; check_mt6873_usb_dts.py verifies every value
+ * below against the applied MT6873 headers.
+ */
+#define ATOM_MT6873_CLK_INFRA_AO_PMIC_CG_TMR	1
+#define ATOM_MT6873_CLK_INFRA_AO_PMIC_CG_AP	2
+#define ATOM_MT6873_CLK_INFRA_AO_GCE_CG		9
+#define ATOM_MT6873_CLK_INFRA_AO_I2C0_CG	12
+#define ATOM_MT6873_CLK_INFRA_AO_UART0_CG	22
+#define ATOM_MT6873_CLK_INFRA_AO_UNIPRO_SYSCLK_CG	66
+#define ATOM_MT6873_CLK_INFRA_AO_UFS_MP_SAP_BCLK_CG	68
+#define ATOM_MT6873_CLK_INFRA_AO_UFS_CG		83
+#define ATOM_MT6873_CLK_INFRA_AO_SSUSB_CG	57
+#define ATOM_MT6873_CLK_INFRA_AO_SSUSB_XHCI_CG	86
+#define ATOM_MT6873_CLK_INFRA_AO_AP_DMA_CG	129
+#define ATOM_MT6873_CLK_IMP_IIC_WRAP_W_AP_I2C5_CG_RO	1
+#define ATOM_MT6873_CLK_TOP_MUX_DISP		5
+#define ATOM_MT6873_CLK_MM_DISP_MUTEX0		1
+#define ATOM_MT6873_CLK_MM_SMI_INFRA		12
+#define ATOM_MT6873_CLK_MM_DSI0			16
+#define ATOM_MT6873_CLK_MM_SMI_COMMON		18
+#define ATOM_MT6873_CLK_MM_SMI_GALS		28
+#define ATOM_MT6873_CLK_MM_SMI_IOMMU		32
+#define ATOM_MT6873_CLK_MM_DSI_DSI0		33
+
+#define ATOM_MT6873_PINMUX_GPIO111_GPIO	(111 << 8)
+#define ATOM_MT6873_PINMUX_GPIO112_GPIO	(112 << 8)
+#define ATOM_MT6873_PINMUX_GPIO113_GPIO	(113 << 8)
+#define ATOM_MT6873_PINMUX_GPIO202_SCL5	((202 << 8) | 1)
+#define ATOM_MT6873_PINMUX_GPIO203_SDA5	((203 << 8) | 1)
+
+#define ATOM_MT6873_POWER_DOMAIN_CONN	2
+#define ATOM_MT6873_POWER_DOMAIN_DIS	17
+
+/ {
+	model = "Xiaomi Redmi 10X 5G (atom, MT6873 USB2 peripheral)";
+	compatible = "xiaomi,atom", "mediatek,mt6873";
+
+	aliases {
+		serial0 = &uart0;
+	};
+
+	chosen: chosen {
+		/*
+		 * LK asserts unless this property exists, then appends the
+		 * final boot image command line itself. Keep the seed empty so
+		 * the unsupported 8250 earlycon cannot be reintroduced.
+		 */
+		bootargs = "";
+		stdout-path = "serial0:921600n8";
+	};
+
+	memory@40000000 {
+		device_type = "memory";
+		reg = <0 0x40000000 0 0x80000000>;
+	};
+
+	/*
+	 * Vendor clock data places OSC_D4 at 65 MHz, so the fixed oscillator
+	 * itself is 260 MHz. The MT6873 AP_DMA AXI mux references it by the
+	 * global clock name "ulposc".
+	 */
+	ulposc: oscillator-ulposc {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <260000000>;
+		clock-output-names = "ulposc";
+	};
+
+	/*
+	 * Probe-only proxy for the 3.0 V VEMC rail already left enabled by the
+	 * vendor boot chain. This does not claim that the MT6359 VEMC mapping is
+	 * complete or controllable through upstream regulators.
+	 */
+	atom_ufs_vcc: regulator-ufs-vcc {
+		compatible = "regulator-fixed";
+		regulator-name = "atom-ufs-vcc";
+		regulator-min-microvolt = <3000000>;
+		regulator-max-microvolt = <3000000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	reserved_memory: reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/*
+		 * The tested LK already creates a pstore mblock at
+		 * 0x4d010000-0x4d0effff and rejects a DTB node claiming the
+		 * same range. Keep this label as the overlay target; the
+		 * loader appends its mblock description during handoff.
+		 */
+	};
+
+	/*
+	 * LK unconditionally applies the stock atom dtbo before booting this
+	 * image. Its overlay FDT (SHA-256
+	 * 1d8f01e10f14d16597e68ea4f3ce56f1f01bbfe20f89061ba6f905997844f305)
+	 * requires 61 fixup labels. The pinctrl, I2C, SPI, DSI and reserved
+	 * memory targets above already exist. Keep all unrelated vendor
+	 * fragments under this disabled container so they can resolve without
+	 * attaching vendor camera, touch, charger, display or keypad data to
+	 * the real mainline devices.
+	 */
+	lk_overlay_targets: lk-overlay-targets {
+		status = "disabled";
+
+		accdet: accdet-placeholder { status = "disabled"; };
+		auxadc: auxadc-placeholder { status = "disabled"; };
+		bat_gm30: bat-gm30-placeholder { status = "disabled"; };
+		camera_af_hw_node: camera-af-hw-node-placeholder {
+			status = "disabled";
+		};
+		charger: charger-placeholder { status = "disabled"; };
+		consys: consys-placeholder { status = "disabled"; };
+		cp_qc30: cp-qc30-placeholder { status = "disabled"; };
+		dispsys_config: dispsys-config-placeholder {
+			status = "disabled";
+		};
+		dsi0: dsi0-placeholder { status = "disabled"; };
+		dsi_te: dsi-te-placeholder { status = "disabled"; };
+		fan53870_l1: fan53870-l1-placeholder { status = "disabled"; };
+		fan53870_l2: fan53870-l2-placeholder { status = "disabled"; };
+		fan53870_l3: fan53870-l3-placeholder { status = "disabled"; };
+		fan53870_l4: fan53870-l4-placeholder { status = "disabled"; };
+		fan53870_l5: fan53870-l5-placeholder { status = "disabled"; };
+		fan53870_l6: fan53870-l6-placeholder { status = "disabled"; };
+		fan53870_l7: fan53870-l7-placeholder { status = "disabled"; };
+		goodix_fp: goodix-fp-placeholder { status = "disabled"; };
+		gpio: gpio-placeholder { status = "disabled"; };
+		gpio_usage_mapping: gpio-usage-mapping-placeholder {
+			status = "disabled";
+		};
+		irtx_pwm: irtx-pwm-placeholder { status = "disabled"; };
+		kd_camera_hw1: kd-camera-hw1-placeholder {
+			status = "disabled";
+		};
+		keypad: keypad-placeholder { status = "disabled"; };
+		lk_charger: lk-charger-placeholder { status = "disabled"; };
+		md1_sim1_hot_plug_eint: md1-sim1-hot-plug-eint-placeholder {
+			status = "disabled";
+		};
+		md_auxadc: md-auxadc-placeholder { status = "disabled"; };
+		mrdump_ext_rst: mrdump-ext-rst-placeholder {
+			status = "disabled";
+		};
+		mt6360_ldo: mt6360-ldo-placeholder { status = "disabled"; };
+		mt6360_pmic: mt6360-pmic-placeholder { status = "disabled"; };
+		mt6360_pmu: mt6360-pmu-placeholder { status = "disabled"; };
+		mt6360_typec: mt6360-typec-placeholder {
+			status = "disabled";
+		};
+		i2c5: i2c5-placeholder { status = "disabled"; };
+		i2c6: i2c6-placeholder { status = "disabled"; };
+		mt_pmic_vcamio_ldo_reg: mt-pmic-vcamio-ldo-reg-placeholder {
+			status = "disabled";
+		};
+		mt_pmic_vfp_ldo_reg: mt-pmic-vfp-ldo-reg-placeholder {
+			status = "disabled";
+		};
+		mt_pmic_vtp_ldo_reg: mt-pmic-vtp-ldo-reg-placeholder {
+			status = "disabled";
+		};
+		mtkfb: mtkfb-placeholder { status = "disabled"; };
+		odm: odm-placeholder { status = "disabled"; };
+		pd_adapter: pd-adapter-placeholder { status = "disabled"; };
+		pmic_clock_buffer_ctrl: pmic-clock-buffer-ctrl-placeholder {
+			status = "disabled";
+		};
+		smart_pa: smart-pa-placeholder { status = "disabled"; };
+		spi7: spi7-placeholder { status = "disabled"; };
+		subpmic_pmu_eint: subpmic-pmu-eint-placeholder {
+			status = "disabled";
+		};
+		tcpc_pd: tcpc-pd-placeholder { status = "disabled"; };
+		thermal_message: thermal-message-placeholder {
+			status = "disabled";
+		};
+		touch: touch-placeholder { status = "disabled"; };
+		usb0phy: usb0phy-placeholder { status = "disabled"; };
+		usbpd_pm: usbpd-pm-placeholder { status = "disabled"; };
+		xiaomi_touch: xiaomi-touch-placeholder {
+			status = "disabled";
+		};
+	};
+
+	/*
+	 * LK's post-overlay fixup hooks still search for vendor-only SCP and
+	 * ADSP compatible strings even when those subsystems are intentionally
+	 * disabled. These are handoff shims, not declarations of functional
+	 * mainline SCP/ADSP hardware or firmware support.
+	 */
+	lk_handoff_shims: lk-handoff-shims {
+		status = "disabled";
+
+		lk_scp_shim: scp {
+			compatible = "mediatek,scp";
+			status = "disabled";
+		};
+
+		lk_adsp_common_shim: adsp-common {
+			compatible = "mediatek,adsp_common";
+			status = "disabled";
+		};
+	};
+
+	soc {
+		/*
+		 * Compile-only DSI probe topology for the next hardware stage.
+		 * Keep both the host and panel disabled until the build and
+		 * schema checks are reviewed. The inherited mt8192 DSI node was
+		 * removed above so the vendor dtbo cannot enable MT8192 data.
+		 */
+		mt6873_dsi: dsi@14010000 {
+			compatible = "mediatek,mt6873-dsi";
+			reg = <0 0x14010000 0 0x1000>;
+			interrupts = <GIC_SPI 265 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&mmsys ATOM_MT6873_CLK_MM_DSI0>,
+				 <&mmsys ATOM_MT6873_CLK_MM_DSI_DSI0>,
+				 <&mipi_tx0>;
+			clock-names = "engine", "digital", "hs";
+			power-domains = <&spm ATOM_MT6873_POWER_DOMAIN_DIS>;
+			phys = <&mipi_tx0>;
+			phy-names = "dphy";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+
+			port {
+				dsi_out: endpoint {
+					remote-endpoint = <&panel_in>;
+				};
+			};
+
+			panel@0 {
+				compatible = "samsung,s6e8fc01";
+				reg = <0>;
+				power-supply = <&mt6359_vibr_ldo_reg>;
+				enable-gpios = <&pio 29 GPIO_ACTIVE_HIGH>;
+				reset-gpios = <&pio 42 GPIO_ACTIVE_HIGH>;
+				status = "disabled";
+
+				port {
+					panel_in: endpoint {
+						remote-endpoint = <&dsi_out>;
+					};
+				};
+			};
+		};
+
+		/*
+		 * The tested LK writes boot-time EMI/DRAM parameters to
+		 * /dramc or /soc/dramc. Keep a disabled LK-only target so the
+		 * hook does not fail; no mainline DRAM controller driver binds
+		 * to or enables this node.
+		 */
+		lk_dramc: dramc {
+			status = "disabled";
+		};
+
+		ufs: ufs@11270000 {
+			compatible = "mediatek,mt6873-ufshci",
+				     "mediatek,mt8183-ufshci";
+			reg = <0 0x11270000 0 0x2300>;
+			/* MT8192's inherited GIC uses the four-cell SPI ABI. */
+			interrupts = <GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&infracfg ATOM_MT6873_CLK_INFRA_AO_UFS_CG>;
+			clock-names = "ufs";
+			freq-table-hz = <0 0>;
+			mediatek,ufs-disable-mcq;
+			phys = <&ufs_phy>;
+			vcc-supply = <&atom_ufs_vcc>;
+			lanes-per-direction = <2>;
+			status = "okay";
+		};
+
+		ufs_phy: ufs-phy@11fa0000 {
+			compatible = "mediatek,mt6873-ufsphy",
+				     "mediatek,mt8183-ufsphy";
+			reg = <0 0x11fa0000 0 0xc000>;
+			clocks = <&infracfg
+				  ATOM_MT6873_CLK_INFRA_AO_UNIPRO_SYSCLK_CG>,
+				 <&infracfg
+				  ATOM_MT6873_CLK_INFRA_AO_UFS_MP_SAP_BCLK_CG>;
+			clock-names = "unipro", "mp";
+			#phy-cells = <0>;
+			status = "okay";
+		};
+
+		/*
+		 * Recreate I2C5 with MT6873 resources. The vendor dtbo's i2c5
+		 * fixup targets the disabled placeholder above, not this node,
+		 * so Android-only subpmic clients cannot attach to the real bus.
+		 */
+		i2c@11e00000 {
+			compatible = "mediatek,mt6873-i2c",
+				     "mediatek,mt8192-i2c";
+			reg = <0 0x11e00000 0 0x1000>,
+			      <0 0x10217500 0 0x80>;
+			interrupts = <GIC_SPI 117 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&imp_iic_wrap_w
+				  ATOM_MT6873_CLK_IMP_IIC_WRAP_W_AP_I2C5_CG_RO>,
+				 <&infracfg ATOM_MT6873_CLK_INFRA_AO_AP_DMA_CG>;
+			clock-names = "main", "dma";
+			clock-div = <3>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&atom_i2c5_pins>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			mt6360: pmic@34 {
+				compatible = "mediatek,mt6360";
+				reg = <0x34>;
+				wakeup-source;
+				interrupt-parent = <&pio>;
+				interrupts = <24 IRQ_TYPE_EDGE_FALLING>;
+				interrupt-names = "IRQB";
+				interrupt-controller;
+				#interrupt-cells = <1>;
+
+				charger {
+					compatible = "mediatek,mt6360-chg";
+
+					usb-otg-vbus-regulator {
+						regulator-name = "usb-otg-vbus";
+						regulator-min-microvolt = <4425000>;
+						regulator-max-microvolt = <5825000>;
+					};
+				};
+
+				tcpc {
+					compatible = "mediatek,mt6360-tcpc";
+					interrupt-parent = <&pio>;
+					interrupts = <25 IRQ_TYPE_EDGE_FALLING>;
+					interrupt-names = "PD_IRQB";
+
+					connector {
+						compatible = "usb-c-connector";
+						label = "USB-C";
+						data-role = "dual";
+						power-role = "dual";
+						try-power-role = "sink";
+						source-pdos = <0x19096>;
+						sink-pdos = <0x1912c>;
+						op-sink-microwatt = <15000000>;
+					};
+				};
+			};
+		};
+
+		mtu3: usb@11201000 {
+			compatible = "mediatek,mt6873-mtu3",
+				     "mediatek,mtu3";
+			reg = <0 0x11201000 0 0x2e00>,
+			      <0 0x11203e00 0 0x0100>;
+			reg-names = "mac", "ippc";
+			interrupts = <GIC_SPI 96 IRQ_TYPE_LEVEL_HIGH 0>;
+			interrupt-names = "device";
+			clocks = <&infracfg ATOM_MT6873_CLK_INFRA_AO_SSUSB_CG>,
+				 <&infracfg ATOM_MT6873_CLK_INFRA_AO_SSUSB_XHCI_CG>;
+			clock-names = "sys_ck", "ref_ck";
+			phys = <&u2port0 PHY_TYPE_USB2>,
+			       <&u3port0 PHY_TYPE_USB3>;
+			vusb33-supply = <&mt6359_vusb>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&atom_mtu3_usbc_reverse_pins>;
+			dr_mode = "peripheral";
+			maximum-speed = "high-speed";
+			status = "okay";
+		};
+	};
+};
+
+/* The tested v36 stack uses the MT6873 clock provider, not MT8192 IDs. */
+&topckgen {
+	compatible = "mediatek,mt6873-topckgen", "syscon";
+};
+
+&infracfg {
+	compatible = "mediatek,mt6873-infracfg_ao", "syscon";
+	/delete-property/ #reset-cells;
+};
+
+/*
+ * The inherited MT8192 node uses upstream MT8192 clock ID 7, which is not
+ * the MT6873 GCE gate. Vendor MT6873 data places GCE_CG at ID 9 in
+ * INFRACFG_AO CG0 bit 8, parented by axi_sel.
+ */
+&gce {
+	clocks = <&infracfg ATOM_MT6873_CLK_INFRA_AO_GCE_CG>;
+};
+
+&apmixedsys {
+	compatible = "mediatek,mt6873-apmixedsys", "syscon";
+};
+
+/*
+ * Expose only the MT6873 MMSYS clock provider in this stage. mtk-mmsys
+ * registers clk-mt6873-mm, while every inherited display consumer remains
+ * disabled and no DISP power-domain transition is requested.
+ */
+&mmsys {
+	compatible = "mediatek,mt6873-mmsys", "syscon";
+	status = "okay";
+};
+
+/*
+ * The MT8192 provider cannot supply the MT6873 AP_I2C5 gate. Reuse the
+ * upstream node and register area, but select the MT6873 clock provider.
+ */
+&imp_iic_wrap_w {
+	compatible = "mediatek,mt6873-imp_iic_wrap_w";
+	status = "okay";
+};
+
+/*
+ * These inherited MT8192 multimedia, camera, codec, SMI and IOMMU blocks
+ * either request removed MT8192 power-domain indices or depend on MT8192
+ * clock-provider data. None has verified MT6873 resources yet, so keep them
+ * out of the live platform-device population until their MT6873 port is
+ * reviewed. This also prevents deferred-probe timeouts from masking real
+ * bring-up failures.
+ */
+&audsys { status = "disabled"; };
+&afe { status = "disabled"; };
+&mfgcfg { status = "disabled"; };
+/*
+ * Probe only the reviewed MT6873 mutex consumer. This pulls the default-off
+ * DIS power domain on through generic PM-domain attachment, but enables no
+ * display routing, output engine or panel.
+ */
+&mutex {
+	compatible = "mediatek,mt6873-disp-mutex";
+	clocks = <&mmsys ATOM_MT6873_CLK_MM_DISP_MUTEX0>;
+	power-domains = <&spm ATOM_MT6873_POWER_DOMAIN_DIS>;
+	status = "okay";
+};
+&smi_common { status = "disabled"; };
+&larb0 { status = "disabled"; };
+&larb1 { status = "disabled"; };
+&ovl0 { status = "disabled"; };
+&ovl_2l0 { status = "disabled"; };
+&rdma0 { status = "disabled"; };
+&color0 { status = "disabled"; };
+&ccorr0 { status = "disabled"; };
+&aal0 { status = "disabled"; };
+&gamma0 { status = "disabled"; };
+&postmask0 { status = "disabled"; };
+&dither0 { status = "disabled"; };
+&ovl_2l2 { status = "disabled"; };
+&rdma4 { status = "disabled"; };
+&iommu0 { status = "disabled"; };
+&mipi_tx0 {
+	compatible = "mediatek,mt6873-mipi-tx";
+	clocks = <&clk26m>;
+	clock-output-names = "mipi_tx0_pll";
+	status = "disabled";
+};
+&imgsys { status = "disabled"; };
+&larb9 { status = "disabled"; };
+&imgsys2 { status = "disabled"; };
+&larb11 { status = "disabled"; };
+&vcodec_dec { status = "disabled"; };
+&larb5 { status = "disabled"; };
+&vdecsys_soc { status = "disabled"; };
+&larb4 { status = "disabled"; };
+&vdecsys { status = "disabled"; };
+&vencsys { status = "disabled"; };
+&larb7 { status = "disabled"; };
+&vcodec_enc { status = "disabled"; };
+&camsys { status = "disabled"; };
+&larb13 { status = "disabled"; };
+&larb14 { status = "disabled"; };
+&larb16 { status = "disabled"; };
+&larb17 { status = "disabled"; };
+&larb18 { status = "disabled"; };
+&camsys_rawa { status = "disabled"; };
+&camsys_rawb { status = "disabled"; };
+&camsys_rawc { status = "disabled"; };
+&ipesys { status = "disabled"; };
+&larb20 { status = "disabled"; };
+&larb19 { status = "disabled"; };
+&mdpsys { status = "disabled"; };
+&larb2 { status = "disabled"; };
+
+/*
+ * The inherited MT8192 SPM children use different DT indices and reference
+ * MT8192-only clock providers. Remove every inherited top-level domain and
+ * expose only the vendor-confirmed MT6873 CONN and DIS domains. Both remain
+ * default-off; no display consumer is enabled in this stage.
+ */
+&spm {
+	compatible = "mediatek,mt6873-power-controller";
+	access-controllers = <&infracfg>;
+
+	/delete-node/ power-domain@0;	/* MT8192 AUDIO */
+	/delete-node/ power-domain@1;	/* MT8192 CONN */
+	/delete-node/ power-domain@2;	/* MT8192 MFG0 and child domains */
+	/delete-node/ power-domain@9;	/* MT8192 DISP and child domains */
+
+	atom_conn_power: power-domain@2 {
+		reg = <ATOM_MT6873_POWER_DOMAIN_CONN>;
+		#power-domain-cells = <0>;
+	};
+
+	atom_disp_power: power-domain@17 {
+		reg = <ATOM_MT6873_POWER_DOMAIN_DIS>;
+		clocks = <&topckgen ATOM_MT6873_CLK_TOP_MUX_DISP>,
+			 <&mmsys ATOM_MT6873_CLK_MM_SMI_INFRA>,
+			 <&mmsys ATOM_MT6873_CLK_MM_SMI_COMMON>,
+			 <&mmsys ATOM_MT6873_CLK_MM_SMI_GALS>,
+			 <&mmsys ATOM_MT6873_CLK_MM_SMI_IOMMU>;
+		clock-names = "disp", "disp-0", "disp-1", "disp-2", "disp-3";
+		mediatek,infracfg = <&infracfg>;
+		#power-domain-cells = <0>;
+	};
+};
+
+&pio {
+	compatible = "mediatek,mt6873-pinctrl";
+
+	atom_i2c5_pins: mainline-i2c5-pins {
+		pins-bus {
+			pinmux = <ATOM_MT6873_PINMUX_GPIO202_SCL5
+				  ATOM_MT6873_PINMUX_GPIO203_SDA5>;
+		};
+	};
+
+	atom_mtu3_usbc_reverse_pins: mainline-mtu3-usbc-reverse-pins {
+		pins-switch-sel {
+			pinmux = <ATOM_MT6873_PINMUX_GPIO111_GPIO
+				  ATOM_MT6873_PINMUX_GPIO113_GPIO>;
+			output-high;
+		};
+
+		pins-c2-highz {
+			pinmux = <ATOM_MT6873_PINMUX_GPIO112_GPIO>;
+			input-schmitt-enable;
+			bias-disable;
+		};
+	};
+};
+
+/*
+ * The successful v36 image used the PMIC-wrapper clocks and MT6359 VUSB
+ * provider. Keep the assigned ULPOSC parent setup out of this minimal path:
+ * the boot chain already leaves that state valid, and the MT6873 minimal
+ * clock provider does not expose the MT8192 mux ID.
+ */
+&pwrap {
+	clocks = <&infracfg ATOM_MT6873_CLK_INFRA_AO_PMIC_CG_AP>,
+		 <&infracfg ATOM_MT6873_CLK_INFRA_AO_PMIC_CG_TMR>;
+	clock-names = "spi", "wrap";
+	/delete-property/ assigned-clocks;
+	/delete-property/ assigned-clock-parents;
+
+	pmic: pmic {
+		compatible = "mediatek,mt6359";
+		interrupt-parent = <&pio>;
+		interrupts = <214 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+
+		regulators {
+			compatible = "mediatek,mt6359-regulator";
+
+			mt6359_vusb: ldo_vusb {
+				regulator-name = "vusb";
+				regulator-min-microvolt = <3000000>;
+				regulator-max-microvolt = <3000000>;
+				regulator-enable-ramp-delay = <960>;
+			};
+
+			mt6359_vibr_ldo_reg: ldo_vibr {
+				regulator-name = "vibr";
+				regulator-min-microvolt = <1200000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-enable-ramp-delay = <240>;
+			};
+		};
+	};
+};
+
+&u3phy0 {
+	compatible = "mediatek,mt6873-tphy",
+		     "mediatek,generic-tphy-v2";
+};
+
+&u2port0 {
+	mediatek,eye-src = <4>;
+	mediatek,eye-vrt = <2>;
+	mediatek,eye-term = <2>;
+	mediatek,intr = <30>;
+	mediatek,discth = <7>;
+	mediatek,pre-emphasis = <1>;
+};
+
+/* MTU3 owns IPPC in this candidate; the root xHCI node must stay disabled. */
+&xhci {
+	status = "disabled";
+};
+
+&uart0 {
+	clocks = <&clk26m>, <&infracfg ATOM_MT6873_CLK_INFRA_AO_UART0_CG>;
+	status = "okay";
+};
+
+/*
+ * These inherited MT8192 thermal nodes reference reset IDs that the minimal
+ * MT6873 clock provider does not implement. They are unrelated to the USB
+ * bring-up and must not probe with an incomplete clock provider.
+ */
+&lvts_ap {
+	/delete-property/ resets;
+	status = "disabled";
+};
+
+&svs {
+	/delete-property/ resets;
+	/delete-property/ reset-names;
+	status = "disabled";
+};
+
+&lvts_mcu {
+	/delete-property/ resets;
+	status = "disabled";
+};

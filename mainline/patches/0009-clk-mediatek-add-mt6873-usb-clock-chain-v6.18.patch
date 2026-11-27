@@ -1,0 +1,197 @@
+diff --git a/drivers/clk/mediatek/Kconfig b/drivers/clk/mediatek/Kconfig
+--- a/drivers/clk/mediatek/Kconfig
++++ b/drivers/clk/mediatek/Kconfig
+@@ -380,8 +380,9 @@
+ 	default ARCH_MEDIATEK && ARM64
+ 	help
+ 	  This driver provides only the clocks needed by UART0/UART1, the
+-	  PMIC wrapper, initial UFS bring-up and the SPI controllers from
+-	  APMIXED, TOPCKGEN and INFRACFG_AO. It does not provide a complete
++	  PMIC wrapper, initial UFS bring-up, the SPI controllers, and the
++	  USB xHCI clock chain from APMIXED, TOPCKGEN and INFRACFG_AO. It
++	  does not provide a complete
+ 	  set of MT6873 clocks; other clock IDs intentionally remain
+ 	  unavailable until their hardware data is validated.
+ 
+diff --git a/drivers/clk/mediatek/clk-mt6873.c b/drivers/clk/mediatek/clk-mt6873.c
+--- a/drivers/clk/mediatek/clk-mt6873.c
++++ b/drivers/clk/mediatek/clk-mt6873.c
+@@ -4,13 +4,16 @@
+  *
+  * Register layout and values are derived from the vendor MT6873 clock
+  * driver. This provider intentionally exposes only the clocks needed by
+- * the UART console, PMIC wrapper, initial UFS bring-up and SPI:
++ * the UART console, PMIC wrapper, initial UFS bring-up, SPI and USB:
+  *
+  *   univpll_d6_d8 -> uart_sel -> uart0/1 gate
+  *   clk26m -> f26m_sel -> pmic_tmr/pmic_ap gates
+  *   PLL factors -> ufs_sel -> UFS/UNIPRO gates
+  *   PLL factors -> aes_ufsfde_sel -> UFS FDE gate
+  *   mainpll -> mainpll_d5_d4 -> spi_sel -> SPI0..7 gates
++ *   univpll_d5_d4 -> usb_top_sel
++ *   univpll_d5_d4 -> ssusb_xhci_sel -> SSUSB_XHCI gate
++ *   usbpll -> SSUSB gate
+  *
+  * Unsupported clock IDs remain -ENOENT.
+  */
+@@ -43,7 +46,10 @@
+ 	FACTOR(CLK_TOP_MAINPLL_D6_D4, "mainpll_d6_d4", "mainpll", 1, 24),
+ 	FACTOR(CLK_TOP_UNIVPLL_D4_D2, "univpll_d4_d2", "univpll", 1, 8),
+ 	FACTOR(CLK_TOP_UNIVPLL_D4_D4, "univpll_d4_d4", "univpll", 1, 16),
++	FACTOR(CLK_TOP_UNIVPLL_D5_D2, "univpll_d5_d2", "univpll", 1, 10),
++	FACTOR(CLK_TOP_UNIVPLL_D5_D4, "univpll_d5_d4", "univpll", 1, 20),
+ 	FACTOR(CLK_TOP_UNIVPLL_D6, "univpll_d6", "univpll", 1, 6),
++	FACTOR(CLK_TOP_UNIVPLL_D6_D4, "univpll_d6_d4", "univpll", 1, 24),
+ 	FACTOR(CLK_TOP_UNIVPLL_D6_D8, "univpll_d6_d8", "univpll", 1, 48),
+ 	FACTOR(CLK_TOP_MSDCPLL_D2, "msdcpll_d2", "msdcpll", 1, 2),
+ 	FACTOR(CLK_TOP_MSDCPLL_D4, "msdcpll_d4", "msdcpll", 1, 4),
+@@ -81,11 +87,24 @@
+ 	"msdcpll_d4",
+ };
+ 
++static const char * const usb_top_parents[] = {
++	"clk26m",
++	"univpll_d5_d4",
++	"univpll_d6_d4",
++	"univpll_d5_d2",
++};
++
+ static const struct mtk_mux top_muxes[] = {
+ 	MUX_CLR_SET_UPD(CLK_TOP_MUX_UART, "uart_sel", uart_parents,
+ 			0x70, 0x74, 0x78, 8, 1, 0x004, 25),
+ 	MUX_CLR_SET_UPD(CLK_TOP_MUX_SPI, "spi_sel", spi_parents,
+ 			0x70, 0x74, 0x78, 16, 2, 0x004, 26),
++	MUX_CLR_SET_UPD(CLK_TOP_MUX_USB_TOP, "usb_top_sel",
++			usb_top_parents, 0xa0, 0xa4, 0xa8, 24, 2,
++			0x004, 8),
++	MUX_CLR_SET_UPD(CLK_TOP_MUX_SSUSB_XHCI, "ssusb_xhci_sel",
++			usb_top_parents, 0xb0, 0xb4, 0xb8, 0, 2,
++			0x004, 9),
+ 	MUX_CLR_SET_UPD(CLK_TOP_MUX_AES_UFSFDE, "aes_ufsfde_sel",
+ 			aes_ufsfde_parents, 0xd0, 0xd4, 0xd8, 16, 3,
+ 			0x004, 19),
+@@ -132,6 +151,9 @@
+ 		 &mtk_clk_gate_ops_setclr),
+ 	GATE_MTK(CLK_INFRA_AO_SPI0_CG, "infracfg_ao_spi0_cg",
+ 		 "spi_sel", &infra_ao_cg1_regs, 1,
++		 &mtk_clk_gate_ops_setclr),
++	GATE_MTK(CLK_INFRA_AO_SSUSB_CG, "infracfg_ao_ssusb_cg",
++		 "usbpll", &infra_ao_cg2_regs, 1,
+ 		 &mtk_clk_gate_ops_setclr),
+ 	GATE_MTK(CLK_INFRA_AO_SPI1_CG, "infracfg_ao_spi1_cg",
+ 		 "spi_sel", &infra_ao_cg2_regs, 6,
+@@ -164,6 +186,9 @@
+ 	GATE_MTK(CLK_INFRA_AO_UFS_TICK_CG, "infracfg_ao_ufs_tick_cg",
+ 		 "ufs_sel", &infra_ao_cg2_regs, 30,
+ 		 &mtk_clk_gate_ops_setclr),
++	GATE_MTK(CLK_INFRA_AO_SSUSB_XHCI_CG, "infracfg_ao_ssusb_xhci_cg",
++		 "ssusb_xhci_sel", &infra_ao_cg2_regs, 31,
++		 &mtk_clk_gate_ops_setclr),
+ 	GATE_MTK(CLK_INFRA_AO_SPI4_CG, "infracfg_ao_spi4_cg",
+ 		 "spi_sel", &infra_ao_cg2_regs, 25,
+ 		 &mtk_clk_gate_ops_setclr),
+@@ -338,5 +363,5 @@
+ };
+ module_platform_driver(clk_mt6873_driver);
+ 
+-MODULE_DESCRIPTION("MediaTek MT6873 minimal UART, PMIC, UFS and SPI clocks");
++MODULE_DESCRIPTION("MediaTek MT6873 minimal UART, PMIC, UFS, SPI and USB clocks");
+ MODULE_LICENSE("GPL");
+diff --git a/drivers/clk/mediatek/clk-mt6873-apmixedsys.c b/drivers/clk/mediatek/clk-mt6873-apmixedsys.c
+--- a/drivers/clk/mediatek/clk-mt6873-apmixedsys.c
++++ b/drivers/clk/mediatek/clk-mt6873-apmixedsys.c
+@@ -1,6 +1,6 @@
+ // SPDX-License-Identifier: GPL-2.0-only
+ /*
+- * MediaTek MT6873 APMIXED clock support needed by UART, PMIC and UFS.
++ * MediaTek MT6873 APMIXED clock support needed by UART, PMIC, UFS and USB.
+  *
+  * Register layout and values are derived from the vendor MT6873 clock
+  * driver. Only the PLLs used by these minimal clock chains are registered
+@@ -56,6 +56,25 @@
+ 		.pcw_shift = 0,
+ 		.pcw_chg_reg = 0,
+ 		.en_reg = 0,
++	},
++	{
++		.id = CLK_APMIXED_USBPLL,
++		.name = "usbpll",
++		.reg = 0x3c4,
++		.pwr_reg = 0x3cc,
++		.en_mask = 0,
++		.pd_reg = 0x3c4,
++		.pd_shift = 24,
++		.flags = 0,
++		.fmin = MT6873_PLL_FMIN,
++		.fmax = MT6873_PLL_FMAX,
++		.pcwbits = 22,
++		.pcwibits = MT6873_INTEGER_BITS,
++		.pcw_reg = 0x3c4,
++		.pcw_shift = 0,
++		.pcw_chg_reg = 0,
++		.en_reg = 0x3cc,
++		.pll_en_bit = 2,
+ 	},
+ 	{
+ 		.id = CLK_APMIXED_MSDCPLL,
+@@ -143,5 +162,5 @@
+ };
+ module_platform_driver(clk_mt6873_apmixed_driver);
+ 
+-MODULE_DESCRIPTION("MediaTek MT6873 APMIXED UART, PMIC and UFS clocks");
++MODULE_DESCRIPTION("MediaTek MT6873 APMIXED UART, PMIC, UFS and USB clocks");
+ MODULE_LICENSE("GPL");
+diff --git a/include/dt-bindings/clock/mt6873-clk.h b/include/dt-bindings/clock/mt6873-clk.h
+--- a/include/dt-bindings/clock/mt6873-clk.h
++++ b/include/dt-bindings/clock/mt6873-clk.h
+@@ -6,10 +6,12 @@
+ #ifndef _DT_BINDINGS_CLK_MT6873_H
+ #define _DT_BINDINGS_CLK_MT6873_H
+ 
+-/* TOPCKGEN clock IDs needed by the UART, PMIC, UFS and SPI clock chains. */
++/* TOPCKGEN clock IDs needed by the UART, PMIC, UFS, SPI and USB chains. */
+ #define CLK_TOP_CLK26M			138
+ #define CLK_TOP_MUX_UART		29
+ #define CLK_TOP_MUX_SPI			30
++#define CLK_TOP_MUX_USB_TOP		43
++#define CLK_TOP_MUX_SSUSB_XHCI		44
+ #define CLK_TOP_MUX_AES_UFSFDE		54
+ #define CLK_TOP_MUX_UFS			55
+ #define CLK_TOP_MAINPLL_D4		72
+@@ -23,7 +25,10 @@
+ #define CLK_TOP_MAINPLL_D6_D4		83
+ #define CLK_TOP_UNIVPLL_D4_D2		91
+ #define CLK_TOP_UNIVPLL_D4_D4		92
++#define CLK_TOP_UNIVPLL_D5_D2		95
++#define CLK_TOP_UNIVPLL_D5_D4		96
+ #define CLK_TOP_UNIVPLL_D6		98
++#define CLK_TOP_UNIVPLL_D6_D4		100
+ #define CLK_TOP_UNIVPLL_D6_D8		101
+ #define CLK_TOP_MSDCPLL_D2		129
+ #define CLK_TOP_MSDCPLL_D4		130
+@@ -33,14 +38,16 @@
+ #define CLK_APMIXED_MAINPLL		1
+ #define CLK_APMIXED_UNIVPLL		2
+ #define CLK_APMIXED_MSDCPLL		3
++#define CLK_APMIXED_USBPLL		12
+ #define CLK_APMIXED_NR_CLK		14
+ 
+-/* INFRACFG_AO clock IDs needed by PMIC, UART, UFS and SPI. */
++/* INFRACFG_AO clock IDs needed by PMIC, UART, UFS, SPI and USB. */
+ #define CLK_INFRA_AO_PMIC_CG_TMR	1
+ #define CLK_INFRA_AO_PMIC_CG_AP		2
+ #define CLK_INFRA_AO_UART0_CG		22
+ #define CLK_INFRA_AO_UART1_CG		23
+ #define CLK_INFRA_AO_SPI0_CG		30
++#define CLK_INFRA_AO_SSUSB_CG		57
+ #define CLK_INFRA_AO_SPI1_CG		62
+ #define CLK_INFRA_AO_SPI2_CG		64
+ #define CLK_INFRA_AO_SPI3_CG		65
+@@ -52,6 +59,7 @@
+ #define CLK_INFRA_AO_UFS_CG		83
+ #define CLK_INFRA_AO_AES_UFSFDE_CG	84
+ #define CLK_INFRA_AO_UFS_TICK_CG	85
++#define CLK_INFRA_AO_SSUSB_XHCI_CG	86
+ #define CLK_INFRA_AO_SPI6_CG		115
+ #define CLK_INFRA_AO_SPI7_CG		116
+ #define CLK_INFRA_AO_NR_CLK		132

@@ -1,0 +1,23 @@
+diff --git a/drivers/pmdomain/mediatek/mt6873-pm-domains.h b/drivers/pmdomain/mediatek/mt6873-pm-domains.h
+index 000000000..000000000 100644
+--- a/drivers/pmdomain/mediatek/mt6873-pm-domains.h
++++ b/drivers/pmdomain/mediatek/mt6873-pm-domains.h
+@@ -68,15 +68,15 @@ static const struct scpsys_domain_data scpsys_domain_data_mt6873[] = {
+-			BUS_PROT_WR(INFRA,
++			BUS_PROT_WR_IGN(INFRA,
+ 				    MT6873_TOP_AXI_PROT_EN_DISP,
+ 				    MT6873_TOP_AXI_PROT_EN_SET,
+ 				    MT6873_TOP_AXI_PROT_EN_CLR,
+ 				    MT6873_TOP_AXI_PROT_EN_STA1),
+-			BUS_PROT_WR(INFRA,
++			BUS_PROT_WR_IGN(INFRA,
+ 				    MT6873_TOP_AXI_PROT_EN_MM_DISP_2ND,
+ 				    MT6873_TOP_AXI_PROT_EN_MM_SET,
+ 				    MT6873_TOP_AXI_PROT_EN_MM_CLR,
+ 				    MT6873_TOP_AXI_PROT_EN_MM_STA1),
+-			BUS_PROT_WR(INFRA,
++			BUS_PROT_WR_IGN(INFRA,
+ 				    MT6873_TOP_AXI_PROT_EN_MM_2_DISP_2ND,
+ 				    MT6873_TOP_AXI_PROT_EN_MM_2_SET,
+ 				    MT6873_TOP_AXI_PROT_EN_MM_2_CLR,
+ 				    MT6873_TOP_AXI_PROT_EN_MM_2_STA1),

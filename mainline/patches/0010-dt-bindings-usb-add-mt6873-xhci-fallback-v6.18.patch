@@ -1,0 +1,11 @@
+diff --git a/Documentation/devicetree/bindings/usb/mediatek,mtk-xhci.yaml b/Documentation/devicetree/bindings/usb/mediatek,mtk-xhci.yaml
+--- a/Documentation/devicetree/bindings/usb/mediatek,mtk-xhci.yaml
++++ b/Documentation/devicetree/bindings/usb/mediatek,mtk-xhci.yaml
+@@ -25,6 +25,7 @@
+       - enum:
+           - mediatek,mt2701-xhci
+           - mediatek,mt2712-xhci
++          - mediatek,mt6873-xhci
+           - mediatek,mt7622-xhci
+           - mediatek,mt7623-xhci
+           - mediatek,mt7629-xhci

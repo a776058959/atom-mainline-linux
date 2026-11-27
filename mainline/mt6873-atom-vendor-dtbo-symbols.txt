@@ -1,0 +1,66 @@
+# Fixup symbols required by the selected stock atom dtbo overlay.
+# Source: backup dtbo.img SHA-256
+# 02b659f09eb2744bcdd5a859238ff908b4cbaf1639259c9170f4c54159929a26
+# Selected FDT SHA-256
+# 1d8f01e10f14d16597e68ea4f3ce56f1f01bbfe20f89061ba6f905997844f305
+accdet
+auxadc
+bat_gm30
+camera_af_hw_node
+charger
+chosen
+consys
+cp_qc30
+dispsys_config
+dsi0
+dsi_te
+fan53870_l1
+fan53870_l2
+fan53870_l3
+fan53870_l4
+fan53870_l5
+fan53870_l6
+fan53870_l7
+goodix_fp
+gpio
+gpio_usage_mapping
+i2c0
+i2c1
+i2c2
+i2c3
+i2c4
+i2c5
+i2c6
+i2c7
+i2c8
+i2c9
+irtx_pwm
+kd_camera_hw1
+keypad
+lk_charger
+md1_sim1_hot_plug_eint
+md_auxadc
+mrdump_ext_rst
+mt6360_ldo
+mt6360_pmic
+mt6360_pmu
+mt6360_typec
+mt_pmic_vcamio_ldo_reg
+mt_pmic_vfp_ldo_reg
+mt_pmic_vtp_ldo_reg
+mtkfb
+odm
+pd_adapter
+pio
+pmic_clock_buffer_ctrl
+reserved_memory
+smart_pa
+spi1
+spi7
+subpmic_pmu_eint
+tcpc_pd
+thermal_message
+touch
+usb0phy
+usbpd_pm
+xiaomi_touch

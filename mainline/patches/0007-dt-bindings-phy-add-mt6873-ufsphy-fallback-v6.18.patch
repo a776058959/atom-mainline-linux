@@ -1,0 +1,27 @@
+From: Codex <codex@localhost>
+Date: Fri, 21 Nov 2026 00:00:00 +0800
+Subject: [PATCH] dt-bindings: phy: add MT6873 UFS PHY fallback
+
+The MT6873 UFS M-PHY has the same register window as the MT8183 binding.
+Vendor LK performs the device-specific efuse and TX calibration before
+handoff, while the vendor 4.14 kernel M-PHY init hook is a no-op.  Use an
+MT6873-specific compatible with an MT8183 fallback for the initial mainline
+power/clock probe.
+
+This does not establish that the MT8183 PHY power sequence covers every
+MT6873 calibration or power-state transition.
+
+diff --git a/Documentation/devicetree/bindings/phy/mediatek,ufs-phy.yaml b/Documentation/devicetree/bindings/phy/mediatek,ufs-phy.yaml
+index 3e62b5d..70c289f 100644
+--- a/Documentation/devicetree/bindings/phy/mediatek,ufs-phy.yaml
++++ b/Documentation/devicetree/bindings/phy/mediatek,ufs-phy.yaml
+@@ -20,6 +20,7 @@ properties:
+     oneOf:
+       - items:
+           - enum:
++              - mediatek,mt6873-ufsphy
+               - mediatek,mt8195-ufsphy
+           - const: mediatek,mt8183-ufsphy
+       - const: mediatek,mt8183-ufsphy
+-- 
+2.43.0

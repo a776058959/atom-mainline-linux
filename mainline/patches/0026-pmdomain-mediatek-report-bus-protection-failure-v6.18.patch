@@ -1,0 +1,58 @@
+diff --git a/drivers/pmdomain/mediatek/mtk-pm-domains.c b/drivers/pmdomain/mediatek/mtk-pm-domains.c
+index 000000000..000000000 100644
+--- a/drivers/pmdomain/mediatek/mtk-pm-domains.c
++++ b/drivers/pmdomain/mediatek/mtk-pm-domains.c
+@@ -160,6 +160,40 @@ static struct regmap *scpsys_bus_protect_get_sta_regmap(struct scpsys_domain *pd
+ 	return scpsys->bus_prot[block_idx];
+ }
+ 
++static void scpsys_bus_protect_dump_failure(struct scpsys_domain *pd,
++					    const struct scpsys_bus_prot_data *bpd,
++					    int index)
++{
++	struct scpsys *scpsys = pd->scpsys;
++	struct regmap *sta_regmap = scpsys_bus_protect_get_sta_regmap(pd, bpd);
++	struct regmap *regmap = scpsys_bus_protect_get_regmap(pd, bpd);
++	u32 expected_ack;
++	u32 set_val = 0;
++	u32 clr_val = 0;
++	u32 sta_val = 0;
++	int set_ret;
++	int clr_ret;
++	int sta_ret;
++
++	expected_ack = (bpd->bus_prot_sta_block == BUS_PROT_BLOCK_INFRA_NAO ?
++			bpd->bus_prot_sta_mask : 0);
++	set_ret = regmap_read(regmap, bpd->bus_prot_set, &set_val);
++	clr_ret = regmap_read(regmap, bpd->bus_prot_clr, &clr_val);
++	sta_ret = regmap_read(sta_regmap, bpd->bus_prot_sta, &sta_val);
++
++	dev_err(scpsys->dev,
++		"%s: bus-protection[%d] clear failed: block=%u sta-block=%u mask=%#x sta-mask=%#x flags=%#x\n",
++		pd->genpd.name, index, (unsigned int)bpd->bus_prot_block,
++		(unsigned int)bpd->bus_prot_sta_block,
++		bpd->bus_prot_set_clr_mask, bpd->bus_prot_sta_mask,
++		(unsigned int)bpd->flags);
++	dev_err(scpsys->dev,
++		"%s: bus-protection[%d] regs: set[%#x]=%#x(rc=%d) clr[%#x]=%#x(rc=%d) sta[%#x]=%#x(rc=%d) expected=%#x\n",
++		pd->genpd.name, index, bpd->bus_prot_set, set_val, set_ret,
++		bpd->bus_prot_clr, clr_val, clr_ret, bpd->bus_prot_sta,
++		sta_val, sta_ret, expected_ack);
++}
++
+ static int scpsys_bus_protect_clear(struct scpsys_domain *pd,
+ 				    const struct scpsys_bus_prot_data *bpd)
+ {
+@@ -224,9 +259,11 @@ static int scpsys_bus_protect_disable(struct scpsys_domain *pd)
+ 		if (bpd->flags & BUS_PROT_INVERTED)
+ 			ret = scpsys_bus_protect_set(pd, bpd);
+ 		else
+ 			ret = scpsys_bus_protect_clear(pd, bpd);
+-		if (ret)
++		if (ret) {
++			scpsys_bus_protect_dump_failure(pd, bpd, i);
+ 			return ret;
++		}
+ 	}
+ 
+ 	return 0;

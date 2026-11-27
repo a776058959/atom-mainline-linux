@@ -1,0 +1,18 @@
+diff --git a/drivers/usb/typec/tcpm/tcpci.c b/drivers/usb/typec/tcpm/tcpci.c
+index 43692f7..290954a 100644
+--- a/drivers/usb/typec/tcpm/tcpci.c
++++ b/drivers/usb/typec/tcpm/tcpci.c
+@@ -306,9 +306,10 @@ static int tcpci_set_polarity(struct tcpc_dev *tcpc,
+ 	if (ret < 0)
+ 		return ret;
+ 
+-	return regmap_write(tcpci->regmap, TCPC_TCPC_CTRL,
+-			   (polarity == TYPEC_POLARITY_CC2) ?
+-			   TCPC_TCPC_CTRL_ORIENTATION : 0);
++	return regmap_update_bits(tcpci->regmap, TCPC_TCPC_CTRL,
++				  TCPC_TCPC_CTRL_ORIENTATION,
++				  (polarity == TYPEC_POLARITY_CC2) ?
++				  TCPC_TCPC_CTRL_ORIENTATION : 0);
+ }
+ 
+ static int tcpci_set_orientation(struct tcpc_dev *tcpc,

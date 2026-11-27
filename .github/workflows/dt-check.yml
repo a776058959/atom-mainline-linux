@@ -1,0 +1,116 @@
+name: DT Check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dt-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            gcc-aarch64-linux-gnu bc bison flex libssl-dev libelf-dev \
+            device-tree-compiler python3-venv
+
+      - name: Fetch Linux v6.18.59
+        run: |
+          git clone --depth 1 --branch v6.18.59 \
+            https://github.com/gregkh/linux.git linux
+          git -C linux log -1 --oneline
+
+      - name: Apply MT6873 patches
+        run: |
+          for patch in mainline/patches/*.patch; do
+            git -C linux apply "$GITHUB_WORKSPACE/$patch"
+          done
+          git -C linux diff --check
+
+      - name: Install formal DTS
+        run: |
+          cp mainline/mt6873-atom-usb.dts \
+            linux/arch/arm64/boot/dts/mediatek/mt6873-atom-usb.dts
+          cd linux/arch/arm64/boot/dts/mediatek
+          grep -q 'mt6873-atom-usb.dtb' Makefile ||
+            echo 'dtb-$(CONFIG_ARCH_MEDIATEK) += mt6873-atom-usb.dtb' >> Makefile
+          grep -q 'DTC_FLAGS_mt6873-atom-usb' Makefile ||
+            echo 'DTC_FLAGS_mt6873-atom-usb := -@' >> Makefile
+
+      - name: Source-level topology check
+        run: |
+          python3 tools/check_mt6873_usb_dts.py \
+            --dts mainline/mt6873-atom-usb.dts \
+            --base-dts linux/arch/arm64/boot/dts/mediatek/mt8192.dtsi \
+            --patch-root mainline/patches
+
+      - name: Configure and install dtschema
+        run: |
+          make -C linux ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
+          python3 -m venv /tmp/dtschema
+          /tmp/dtschema/bin/pip install --disable-pip-version-check --quiet dtschema
+          echo "/tmp/dtschema/bin" >> "$GITHUB_PATH"
+
+      - name: DT binding and single-DTB checks
+        run: |
+          set -o pipefail
+          SCHEMA_FILES="Documentation/devicetree/bindings/arm/mediatek.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/arm/mediatek/mediatek,mmsys.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/clock/mediatek,mt6873-sys-clock.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/clock/mediatek,mt6873-clock.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/connector/usb-connector.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/display/mediatek/mediatek,dsi.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/display/panel/samsung,s6e8fc01.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/i2c/i2c-mt65xx.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/mailbox/mediatek,gce-mailbox.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/mfd/mediatek,mt6360.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/mfd/mediatek,mt6397.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/phy/mediatek,dsi-phy.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/phy/mediatek,tphy.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/phy/mediatek,ufs-phy.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/pinctrl/mediatek,mt6873-pinctrl.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/power/mediatek,power-controller.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/power/supply/mt6360_charger.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/regulator/mt6359-regulator.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/soc/mediatek/mediatek,pwrap.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/soc/mediatek/mediatek,mutex.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/ufs/mediatek,ufs.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/usb/mediatek,mt6360-tcpc.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/usb/mediatek,mtk-xhci.yaml"
+          SCHEMA_FILES="$SCHEMA_FILES:Documentation/devicetree/bindings/usb/mediatek,mtu3.yaml"
+
+          make -C linux -j"$(nproc)" ARCH=arm64 \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            dt_binding_check DT_SCHEMA_FILES="$SCHEMA_FILES" \
+            2>&1 | tee dt-binding-check.log
+
+          make -C linux -j"$(nproc)" ARCH=arm64 \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CHECK_DTBS=y DT_SCHEMA_FILES="$SCHEMA_FILES" \
+            mediatek/mt6873-atom-usb.dtb \
+            2>&1 | tee dtbs-check.log
+
+          if grep -Eiq \
+            'yamllint: error|(^|: )(warning( |:)|error:)|Traceback' \
+            dt-binding-check.log dtbs-check.log; then
+            echo '[FATAL] DT checks reported warnings, errors or schema messages'
+            exit 1
+          fi
+
+          grep -aq '__symbols__' \
+            linux/arch/arm64/boot/dts/mediatek/mt6873-atom-usb.dtb
+
+      - name: Upload DT results
+        uses: actions/upload-artifact@v4
+        with:
+          name: mt6873-atom-dt-${{ github.run_id }}
+          path: |
+            dt-binding-check.log
+            dtbs-check.log
+            linux/arch/arm64/boot/dts/mediatek/mt6873-atom-usb.dtb

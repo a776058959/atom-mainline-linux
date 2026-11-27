@@ -1,0 +1,90 @@
+diff --git a/drivers/pmdomain/mediatek/mt6873-pm-domains.h b/drivers/pmdomain/mediatek/mt6873-pm-domains.h
+--- a/drivers/pmdomain/mediatek/mt6873-pm-domains.h
++++ b/drivers/pmdomain/mediatek/mt6873-pm-domains.h
+@@ -7,10 +7,10 @@
+ /*
+  * MT6873 power-domain support.
+  *
+- * Only CONN is described here for now. The vendor MT6873 power driver has no
+- * pre-clock for CONN, and CONN must stay default-off until its consumers are
+- * brought up. Other domains require their real MT6873 clock providers first;
+- * do not reuse MT8192 domain clocks merely because the register offsets match.
++ * CONN and DIS are described here. Both remain default-off until their
++ * consumers are brought up. DIS uses the MT6873 vendor power-control offsets,
++ * status bit, SRAM bits and bus-protection sequence below; its clock topology
++ * comes from the MT6873 topckgen and MMSYS providers in the board DTS.
+  */
+ static enum scpsys_bus_prot_block scpsys_bus_prot_blocks_mt6873[] = {
+ 	BUS_PROT_BLOCK_INFRA
+@@ -49,6 +50,43 @@ static const struct scpsys_domain_data scpsys_domain_data_mt6873[] = {
+ 		},
+ 		.caps = MTK_SCPD_KEEP_DEFAULT_OFF,
+ 	},
++	[MT6873_POWER_DOMAIN_DIS] = {
++		.name = "disp",
++		.sta_mask = BIT(20),
++		.ctl_offs = 0x0350,
++		.pwr_sta_offs = 0x016c,
++		.pwr_sta2nd_offs = 0x0170,
++		.sram_pdn_bits = GENMASK(8, 8),
++		.sram_pdn_ack_bits = GENMASK(12, 12),
++		.bp_cfg = {
++			BUS_PROT_WR_IGN(INFRA,
++					MT6873_TOP_AXI_PROT_EN_MM_DISP,
++					MT6873_TOP_AXI_PROT_EN_MM_SET,
++					MT6873_TOP_AXI_PROT_EN_MM_CLR,
++					MT6873_TOP_AXI_PROT_EN_MM_STA1),
++			BUS_PROT_WR_IGN(INFRA,
++					MT6873_TOP_AXI_PROT_EN_MM_2_DISP,
++					MT6873_TOP_AXI_PROT_EN_MM_2_SET,
++					MT6873_TOP_AXI_PROT_EN_MM_2_CLR,
++					MT6873_TOP_AXI_PROT_EN_MM_2_STA1),
++			BUS_PROT_WR(INFRA,
++				    MT6873_TOP_AXI_PROT_EN_DISP,
++				    MT6873_TOP_AXI_PROT_EN_SET,
++				    MT6873_TOP_AXI_PROT_EN_CLR,
++				    MT6873_TOP_AXI_PROT_EN_STA1),
++			BUS_PROT_WR(INFRA,
++				    MT6873_TOP_AXI_PROT_EN_MM_DISP_2ND,
++				    MT6873_TOP_AXI_PROT_EN_MM_SET,
++				    MT6873_TOP_AXI_PROT_EN_MM_CLR,
++				    MT6873_TOP_AXI_PROT_EN_MM_STA1),
++			BUS_PROT_WR(INFRA,
++				    MT6873_TOP_AXI_PROT_EN_MM_2_DISP_2ND,
++				    MT6873_TOP_AXI_PROT_EN_MM_2_SET,
++				    MT6873_TOP_AXI_PROT_EN_MM_2_CLR,
++				    MT6873_TOP_AXI_PROT_EN_MM_2_STA1),
++		},
++		.caps = MTK_SCPD_KEEP_DEFAULT_OFF,
++	},
+ };
+ 
+ static const struct scpsys_soc_data mt6873_scpsys_data = {
+diff --git a/include/linux/soc/mediatek/infracfg.h b/include/linux/soc/mediatek/infracfg.h
+--- a/include/linux/soc/mediatek/infracfg.h
++++ b/include/linux/soc/mediatek/infracfg.h
+@@ -191,6 +191,24 @@
+ #define MT6873_TOP_AXI_PROT_EN_CONN_2ND			BIT(14)
+ #define MT6873_TOP_AXI_PROT_EN_1_CONN			BIT(10)
+ 
++#define MT6873_TOP_AXI_PROT_EN_MM_SET			0x2d4
++#define MT6873_TOP_AXI_PROT_EN_MM_CLR			0x2d8
++#define MT6873_TOP_AXI_PROT_EN_MM_STA1			0x2ec
++#define MT6873_TOP_AXI_PROT_EN_MM_2_SET			0xdcc
++#define MT6873_TOP_AXI_PROT_EN_MM_2_CLR			0xdd0
++#define MT6873_TOP_AXI_PROT_EN_MM_2_STA1		0xdd8
++
++#define MT6873_TOP_AXI_PROT_EN_DISP			(BIT(6) | BIT(23))
++#define MT6873_TOP_AXI_PROT_EN_MM_DISP			(BIT(0) | BIT(2) | \
++							BIT(10) | BIT(12) | \
++							BIT(14) | BIT(16) | \
++							BIT(24) | BIT(26))
++#define MT6873_TOP_AXI_PROT_EN_MM_DISP_2ND		(BIT(1) | BIT(3) | \
++							BIT(15) | BIT(17) | \
++							BIT(25) | BIT(27))
++#define MT6873_TOP_AXI_PROT_EN_MM_2_DISP		(BIT(8) | BIT(12))
++#define MT6873_TOP_AXI_PROT_EN_MM_2_DISP_2ND		(BIT(9) | BIT(13))
++
+ #define MT8188_TOP_AXI_PROT_EN_SET				0x2A0
+ #define MT8188_TOP_AXI_PROT_EN_CLR				0x2A4
+ #define MT8188_TOP_AXI_PROT_EN_STA				0x228

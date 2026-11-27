@@ -1,0 +1,20 @@
+diff --git a/Documentation/devicetree/bindings/usb/mediatek,mtu3.yaml b/Documentation/devicetree/bindings/usb/mediatek,mtu3.yaml
+--- a/Documentation/devicetree/bindings/usb/mediatek,mtu3.yaml
++++ b/Documentation/devicetree/bindings/usb/mediatek,mtu3.yaml
+@@ -22,6 +22,7 @@ properties:
+       - enum:
+           - mediatek,mt2712-mtu3
++          - mediatek,mt6873-mtu3
+           - mediatek,mt8173-mtu3
+           - mediatek,mt8183-mtu3
+           - mediatek,mt8186-mtu3
+           - mediatek,mt8188-mtu3
+@@ -50,6 +51,7 @@ properties:
+       - description: SSUSB device controller interrupt
+       - description: optional, wakeup interrupt used to support runtime PM
+ 
+   interrupt-names:
++    minItems: 1
+     items:
+       - const: device
+       - const: wakeup

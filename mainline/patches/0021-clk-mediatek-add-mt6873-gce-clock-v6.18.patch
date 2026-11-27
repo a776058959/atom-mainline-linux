@@ -1,0 +1,24 @@
+diff --git a/include/dt-bindings/clock/mt6873-clk.h b/include/dt-bindings/clock/mt6873-clk.h
+--- a/include/dt-bindings/clock/mt6873-clk.h
++++ b/include/dt-bindings/clock/mt6873-clk.h
+@@ -54,6 +54,7 @@
+ /* INFRACFG_AO clock IDs needed by the minimal bring-up clock chains. */
+ #define CLK_INFRA_AO_PMIC_CG_TMR	1
+ #define CLK_INFRA_AO_PMIC_CG_AP		2
++#define CLK_INFRA_AO_GCE_CG		9
+ #define CLK_INFRA_AO_I2C0_CG		12
+ #define CLK_INFRA_AO_UART0_CG		22
+ #define CLK_INFRA_AO_UART1_CG		23
+diff --git a/drivers/clk/mediatek/clk-mt6873.c b/drivers/clk/mediatek/clk-mt6873.c
+--- a/drivers/clk/mediatek/clk-mt6873.c
++++ b/drivers/clk/mediatek/clk-mt6873.c
+@@ -190,6 +190,9 @@ static const struct mtk_gate infra_ao_clks[] = {
+ 	GATE_MTK(CLK_INFRA_AO_PMIC_CG_AP, "infracfg_ao_pmic_cg_ap",
+ 		 "f26m_sel", &infra_ao_cg_regs, 1,
+ 		 &mtk_clk_gate_ops_setclr),
++	GATE_MTK(CLK_INFRA_AO_GCE_CG, "infracfg_ao_gce_cg",
++		 "axi_sel", &infra_ao_cg_regs, 8,
++		 &mtk_clk_gate_ops_setclr),
+ 	GATE_MTK(CLK_INFRA_AO_UART0_CG, "infracfg_ao_uart0_cg",
+ 		 "uart_sel", &infra_ao_cg_regs, 22,
+ 		 &mtk_clk_gate_ops_setclr),

@@ -1,0 +1,173 @@
+diff --git a/Documentation/devicetree/bindings/power/mediatek,power-controller.yaml b/Documentation/devicetree/bindings/power/mediatek,power-controller.yaml
+index 500d98921..19b0250ce 100644
+--- a/Documentation/devicetree/bindings/power/mediatek,power-controller.yaml
++++ b/Documentation/devicetree/bindings/power/mediatek,power-controller.yaml
+@@ -25,6 +25,7 @@ properties:
+     enum:
+       - mediatek,mt6735-power-controller
+       - mediatek,mt6795-power-controller
++      - mediatek,mt6873-power-controller
+       - mediatek,mt6893-power-controller
+       - mediatek,mt8167-power-controller
+       - mediatek,mt8173-power-controller
+@@ -98,6 +99,7 @@ $defs:
+         description: |
+           Power domain index. Valid values are defined in:
+               "include/dt-bindings/power/mt6795-power.h" - for MT8167 type power domain.
++              "include/dt-bindings/power/mediatek,mt6873-power.h" - for MT6873 type power domain.
+               "include/dt-bindings/power/mediatek,mt6893-power.h" - for MT6893 type power domain.
+               "include/dt-bindings/power/mt8167-power.h" - for MT8167 type power domain.
+               "include/dt-bindings/power/mt8173-power.h" - for MT8173 type power domain.
+diff --git a/drivers/pmdomain/mediatek/mt6873-pm-domains.h b/drivers/pmdomain/mediatek/mt6873-pm-domains.h
+new file mode 100644
+index 000000000..d8b86a642
+--- /dev/null
++++ b/drivers/pmdomain/mediatek/mt6873-pm-domains.h
+@@ -0,0 +1,58 @@
++/* SPDX-License-Identifier: GPL-2.0-only */
++
++#ifndef __SOC_MEDIATEK_MT6873_PM_DOMAINS_H
++#define __SOC_MEDIATEK_MT6873_PM_DOMAINS_H
++
++#include "mtk-pm-domains.h"
++#include <dt-bindings/power/mediatek,mt6873-power.h>
++
++/*
++ * MT6873 power-domain support.
++ *
++ * Only CONN is described here for now. The vendor MT6873 power driver has no
++ * pre-clock for CONN, and CONN must stay default-off until its consumers are
++ * brought up. Other domains require their real MT6873 clock providers first;
++ * do not reuse MT8192 domain clocks merely because the register offsets match.
++ */
++static enum scpsys_bus_prot_block scpsys_bus_prot_blocks_mt6873[] = {
++	BUS_PROT_BLOCK_INFRA
++};
++
++static const struct scpsys_domain_data scpsys_domain_data_mt6873[] = {
++	[MT6873_POWER_DOMAIN_CONN] = {
++		.name = "conn",
++		.sta_mask = BIT(1),
++		.ctl_offs = 0x0304,
++		.pwr_sta_offs = 0x016c,
++		.pwr_sta2nd_offs = 0x0170,
++		.sram_pdn_bits = 0,
++		.sram_pdn_ack_bits = 0,
++		.bp_cfg = {
++			BUS_PROT_WR(INFRA,
++				    MT6873_TOP_AXI_PROT_EN_CONN,
++				    MT6873_TOP_AXI_PROT_EN_SET,
++				    MT6873_TOP_AXI_PROT_EN_CLR,
++				    MT6873_TOP_AXI_PROT_EN_STA1),
++			BUS_PROT_WR(INFRA,
++				    MT6873_TOP_AXI_PROT_EN_CONN_2ND,
++				    MT6873_TOP_AXI_PROT_EN_SET,
++				    MT6873_TOP_AXI_PROT_EN_CLR,
++				    MT6873_TOP_AXI_PROT_EN_STA1),
++			BUS_PROT_WR(INFRA,
++				    MT6873_TOP_AXI_PROT_EN_1_CONN,
++				    MT6873_TOP_AXI_PROT_EN_1_SET,
++				    MT6873_TOP_AXI_PROT_EN_1_CLR,
++				    MT6873_TOP_AXI_PROT_EN_1_STA1),
++		},
++		.caps = MTK_SCPD_KEEP_DEFAULT_OFF,
++	},
++};
++
++static const struct scpsys_soc_data mt6873_scpsys_data = {
++	.domains_data = scpsys_domain_data_mt6873,
++	.num_domains = ARRAY_SIZE(scpsys_domain_data_mt6873),
++	.bus_prot_blocks = scpsys_bus_prot_blocks_mt6873,
++	.num_bus_prot_blocks = ARRAY_SIZE(scpsys_bus_prot_blocks_mt6873),
++};
++
++#endif /* __SOC_MEDIATEK_MT6873_PM_DOMAINS_H */
+diff --git a/drivers/pmdomain/mediatek/mtk-pm-domains.c b/drivers/pmdomain/mediatek/mtk-pm-domains.c
+index 5b3752043..4a0679c8f 100644
+--- a/drivers/pmdomain/mediatek/mtk-pm-domains.c
++++ b/drivers/pmdomain/mediatek/mtk-pm-domains.c
+@@ -18,6 +18,7 @@
+ 
+ #include "mt6735-pm-domains.h"
+ #include "mt6795-pm-domains.h"
++#include "mt6873-pm-domains.h"
+ #include "mt6893-pm-domains.h"
+ #include "mt8167-pm-domains.h"
+ #include "mt8173-pm-domains.h"
+@@ -894,6 +895,10 @@ static const struct of_device_id scpsys_of_match[] = {
+ 		.compatible = "mediatek,mt6795-power-controller",
+ 		.data = &mt6795_scpsys_data,
+ 	},
++	{
++		.compatible = "mediatek,mt6873-power-controller",
++		.data = &mt6873_scpsys_data,
++	},
+ 	{
+ 		.compatible = "mediatek,mt6893-power-controller",
+ 		.data = &mt6893_scpsys_data,
+diff --git a/include/dt-bindings/power/mediatek,mt6873-power.h b/include/dt-bindings/power/mediatek,mt6873-power.h
+new file mode 100644
+index 000000000..f94389066
+--- /dev/null
++++ b/include/dt-bindings/power/mediatek,mt6873-power.h
+@@ -0,0 +1,38 @@
++/* SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause) */
++/*
++ * Values mirror the vendor SCP_SYS DT ABI in mt6873-clk.h. They are
++ * distinct from the clk-mt6873-pg internal enum and intentionally preserve
++ * the vendor numbering so future domains can be mapped without aliases.
++ */
++
++#ifndef _DT_BINDINGS_POWER_MEDIATEK_MT6873_POWER_H
++#define _DT_BINDINGS_POWER_MEDIATEK_MT6873_POWER_H
++
++#define MT6873_POWER_DOMAIN_MD1			1
++#define MT6873_POWER_DOMAIN_CONN		2
++#define MT6873_POWER_DOMAIN_MFG0		3
++#define MT6873_POWER_DOMAIN_MFG1		4
++#define MT6873_POWER_DOMAIN_MFG2		5
++#define MT6873_POWER_DOMAIN_MFG3		6
++#define MT6873_POWER_DOMAIN_MFG4		7
++#define MT6873_POWER_DOMAIN_MFG5		8
++#define MT6873_POWER_DOMAIN_MFG6		9
++#define MT6873_POWER_DOMAIN_ISP			10
++#define MT6873_POWER_DOMAIN_ISP2		11
++#define MT6873_POWER_DOMAIN_IPE			12
++#define MT6873_POWER_DOMAIN_VDEC		13
++#define MT6873_POWER_DOMAIN_VDEC2		14
++#define MT6873_POWER_DOMAIN_VENC		15
++#define MT6873_POWER_DOMAIN_MDP			16
++#define MT6873_POWER_DOMAIN_DIS			17
++#define MT6873_POWER_DOMAIN_AUDIO		18
++#define MT6873_POWER_DOMAIN_ADSP		19
++#define MT6873_POWER_DOMAIN_CAM			20
++#define MT6873_POWER_DOMAIN_CAM_RAWA		21
++#define MT6873_POWER_DOMAIN_CAM_RAWB		22
++#define MT6873_POWER_DOMAIN_CAM_RAWC		23
++#define MT6873_POWER_DOMAIN_DP_TX		24
++#define MT6873_POWER_DOMAIN_MSDC		25
++#define MT6873_POWER_DOMAIN_VPU			26
++
++#endif /* _DT_BINDINGS_POWER_MEDIATEK_MT6873_POWER_H */
+diff --git a/include/linux/soc/mediatek/infracfg.h b/include/linux/soc/mediatek/infracfg.h
+index 9956e18c5..4d7713cd0 100644
+--- a/include/linux/soc/mediatek/infracfg.h
++++ b/include/linux/soc/mediatek/infracfg.h
+@@ -181,6 +181,17 @@
+ #define MT8192_TOP_AXI_PROT_EN_MM_2_MDP_2ND		BIT(13)
+ #define MT8192_TOP_AXI_PROT_EN_VDNR_CAM			BIT(21)
+ 
++#define MT6873_TOP_AXI_PROT_EN_STA1			0x228
++#define MT6873_TOP_AXI_PROT_EN_1_STA1			0x258
++#define MT6873_TOP_AXI_PROT_EN_SET			0x2a0
++#define MT6873_TOP_AXI_PROT_EN_CLR			0x2a4
++#define MT6873_TOP_AXI_PROT_EN_1_SET			0x2a8
++#define MT6873_TOP_AXI_PROT_EN_1_CLR			0x2ac
++
++#define MT6873_TOP_AXI_PROT_EN_CONN			(BIT(13) | BIT(18))
++#define MT6873_TOP_AXI_PROT_EN_CONN_2ND			BIT(14)
++#define MT6873_TOP_AXI_PROT_EN_1_CONN			BIT(10)
++
+ #define MT8188_TOP_AXI_PROT_EN_SET				0x2A0
+ #define MT8188_TOP_AXI_PROT_EN_CLR				0x2A4
+ #define MT8188_TOP_AXI_PROT_EN_STA				0x228
