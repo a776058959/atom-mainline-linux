@@ -123,10 +123,23 @@ DTB sha256       b333db80ed5bf9a46a62c1a61658df3fb0e4df879c349ceb87e85782db94a7d
 The DTB still has 337 nodes; only the reviewed SMI common/LARB0/LARB1 nodes
 changed relative to Stage B. Hardware provider probe has not been run.
 
+### Stage C1: main IOMMU provider prepared, not validated
+
+The inherited MT8192 IOMMU node is replaced with `mediatek,mt6873-m4u` at the
+vendor-confirmed main address. This stage intentionally uses one bank and one
+IRQ, matching current MT6873 vendor kernels; the legacy bank1-3 nodes are not
+reinterpreted as independent page-table engines.
+
+Only LARB0 and LARB1 are connected to the provider. No device has an `iommus`
+consumer, and OVL/RDMA remain disabled. Public DT and kernel-build gates still
+need to run for this stage.
+
 ## Pending
 
 - full DRM/OVL/RDMA chain;
-- MT6873 SMI traffic validation, LARB0 WRR handling and four-bank IOMMU;
+- MT6873 SMI traffic validation, LARB0 WRR handling and legacy IOMMU bank
+  fault-reporting;
+- IOMMU bank selection, DMA mapping, TLB fault/recovery and suspend/resume;
 - GPU/Panfrost;
 - camera, audio, video codec and other multimedia blocks;
 - full pinmux/eINT lifecycle validation;

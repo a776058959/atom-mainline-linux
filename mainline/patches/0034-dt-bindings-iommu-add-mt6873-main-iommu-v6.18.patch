@@ -1,0 +1,25 @@
+diff --git a/Documentation/devicetree/bindings/iommu/mediatek,iommu.yaml b/Documentation/devicetree/bindings/iommu/mediatek,iommu.yaml
+--- a/Documentation/devicetree/bindings/iommu/mediatek,iommu.yaml
++++ b/Documentation/devicetree/bindings/iommu/mediatek,iommu.yaml
+@@ -74,6 +74,7 @@ properties:
+           - mediatek,mt2712-m4u  # generation two
+           - mediatek,mt6779-m4u  # generation two
+           - mediatek,mt6795-m4u  # generation two
++          - mediatek,mt6873-m4u  # generation two
+           - mediatek,mt6893-iommu-mm         # generation two
+           - mediatek,mt8167-m4u  # generation two
+           - mediatek,mt8173-m4u  # generation two
+@@ -158,5 +159,6 @@ allOf:
+               - mediatek,mt2712-m4u
+               - mediatek,mt6795-m4u
++              - mediatek,mt6873-m4u
+               - mediatek,mt6893-iommu-mm
+               - mediatek,mt8173-m4u
+               - mediatek,mt8186-iommu-mm
+@@ -177,5 +179,6 @@ allOf:
+         compatible:
+           enum:
++            - mediatek,mt6873-m4u
+             - mediatek,mt6893-iommu-mm
+             - mediatek,mt8186-iommu-mm
+             - mediatek,mt8188-iommu-vdo

@@ -24,6 +24,8 @@ The patches apply in numeric order to a clean Linux `v6.18.59` tree.
 0031          Samsung S6E8FC01 panel driver and binding
 0032          MT6873 SMI common/LARB bindings
 0033          MT6873 SMI common/LARB provider data
+0034          MT6873 main IOMMU binding
+0035          MT6873 main IOMMU provider data
 ```
 
 Patches are evidence-backed pieces of an in-progress port, not a claim that

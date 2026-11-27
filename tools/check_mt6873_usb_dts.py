@@ -128,7 +128,6 @@ UNSUPPORTED_INHERITED_CONSUMERS = (
     "dither0",
     "ovl_2l2",
     "rdma4",
-    "iommu0",
     "imgsys",
     "larb9",
     "imgsys2",
@@ -873,11 +872,26 @@ def check_smi_providers(dts, patch_root):
             ),
         )
 
-    iommu = re.search(r"&iommu0\s*\{(?P<body>.*?)\};", clean, flags=re.S)
-    if not iommu or 'status = "disabled";' not in iommu.group("body"):
-        raise SystemExit(
-            "[FATAL] Stage C0 must leave the MT6873 IOMMU consumer disabled"
-        )
+    iommu = extract_braced_body(
+        clean,
+        r"^\s*&iommu0\s*\{",
+        "MT6873 main IOMMU provider",
+    )
+    require_tokens(
+        "MT6873 main IOMMU",
+        iommu,
+        (
+            'compatible = "mediatek,mt6873-m4u"',
+            "reg = <0 0x1401d000 0 0x1000>",
+            "interrupts = <GIC_SPI 277 IRQ_TYPE_LEVEL_HIGH 0>",
+            "clocks = <&mmsys ATOM_MT6873_CLK_MM_SMI_IOMMU>",
+            'clock-names = "bclk"',
+            "power-domains = <&spm ATOM_MT6873_POWER_DOMAIN_DIS>",
+            "mediatek,larbs = <&larb0>, <&larb1>",
+            "#iommu-cells = <1>",
+            'status = "okay"',
+        ),
+    )
 
     binding = (
         Path(patch_root)
@@ -913,6 +927,36 @@ def check_smi_providers(dts, patch_root):
         if marker not in driver:
             raise SystemExit(
                 "[FATAL] 0033 missing MT6873 SMI driver marker: " + marker
+            )
+
+    iommu_binding = (
+        Path(patch_root)
+        / "0034-dt-bindings-iommu-add-mt6873-main-iommu-v6.18.patch"
+    ).read_text(encoding="utf-8")
+    for marker in (
+        "+          - mediatek,mt6873-m4u",
+        "+              - mediatek,mt6873-m4u",
+        "+            - mediatek,mt6873-m4u",
+    ):
+        if marker not in iommu_binding:
+            raise SystemExit(
+                "[FATAL] 0034 missing MT6873 IOMMU binding marker: " + marker
+            )
+
+    iommu_driver = (
+        Path(patch_root)
+        / "0035-iommu-mediatek-add-mt6873-main-iommu-data-v6.18.patch"
+    ).read_text(encoding="utf-8")
+    for marker in (
+        "+static const struct mtk_iommu_plat_data mt6873_data",
+        "+	.m4u_plat     = M4U_MT8192,",
+        "+	.banks_num    = 1,",
+        "+	.larbid_remap    = {{0}, {1}, {4, 5}, {7}, {2}, {9, 11, 19, 20},",
+        '+	{ .compatible = "mediatek,mt6873-m4u", .data = &mt6873_data},',
+    ):
+        if marker not in iommu_driver:
+            raise SystemExit(
+                "[FATAL] 0035 missing MT6873 IOMMU driver marker: " + marker
             )
 
 
@@ -1456,7 +1500,7 @@ def main():
     check_i2c5_mt6360(dts, args.patch_root)
     check_topology(dts)
     print(
-        "[ok] MT6873 formal DTS USB/UFS/I2C5/MT6360 topology and "
+        "[ok] MT6873 formal DTS USB/UFS/I2C5/SMI/IOMMU topology and "
         "evidence checks passed"
     )
 
