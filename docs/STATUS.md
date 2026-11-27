@@ -80,7 +80,7 @@ Observed:
 
 This is not proof of PLL lock, DSI packet transfer or screen output.
 
-### Stage B: prepared, not hardware-verified
+### Stage B: complete on hardware
 
 The panel probe stage changes only `panel@0` to `okay`. It is intended to
 verify:
@@ -90,12 +90,32 @@ verify:
 - acquisition of GPIO 29 and GPIO 42;
 - successful `mipi_dsi_attach()`.
 
-Probe does not run panel prepare/display-on. Screen output remains Stage C.
+Observed:
+
+- `14010000.dsi.0` bound `panel-samsung-s6e8fc01`;
+- the panel acquired the MT6359 VIBR regulator without enabling it;
+- GPIO29 and GPIO42 were acquired and remained low;
+- successful probe proves `mipi_dsi_attach()` returned zero;
+- no panel probe or deferred-probe error was logged.
+
+Probe does not run panel prepare/display-on. Screen output remains a later
+stage.
+
+### Stage C0: SMI provider probe prepared, not hardware-verified
+
+The inherited MT8192 SMI common and LARB0/LARB1 nodes are replaced with
+MT6873-specific providers at the same addresses. MT6873 register defaults,
+bus selection, LARB OSTD data and threshold/SW-flag settings come from the
+vendor source.
+
+IOMMU, OVL, RDMA and all display traffic remain disabled. Vendor LARB0 has an
+additional WRR setup that upstream `mtk-smi` does not yet model; traffic must
+not be enabled until that is resolved.
 
 ## Pending
 
 - full DRM/OVL/RDMA chain;
-- SMI/LARB and MT6873 IOMMU;
+- MT6873 SMI traffic validation, LARB0 WRR handling and four-bank IOMMU;
 - GPU/Panfrost;
 - camera, audio, video codec and other multimedia blocks;
 - full pinmux/eINT lifecycle validation;

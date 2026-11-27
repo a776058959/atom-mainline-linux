@@ -1,0 +1,37 @@
+diff --git a/Documentation/devicetree/bindings/memory-controllers/mediatek,smi-common.yaml b/Documentation/devicetree/bindings/memory-controllers/mediatek,smi-common.yaml
+--- a/Documentation/devicetree/bindings/memory-controllers/mediatek,smi-common.yaml
++++ b/Documentation/devicetree/bindings/memory-controllers/mediatek,smi-common.yaml
+@@ -32,5 +32,6 @@ properties:
+           - mediatek,mt2712-smi-common
+           - mediatek,mt6779-smi-common
+           - mediatek,mt6795-smi-common
++          - mediatek,mt6873-smi-common
+           - mediatek,mt6893-smi-common
+           - mediatek,mt8167-smi-common
+@@ -131,7 +132,8 @@ allOf:
+           enum:
+             - mediatek,mt6779-smi-common
+             - mediatek,mt8183-smi-common
+             - mediatek,mt8186-smi-common
++            - mediatek,mt6873-smi-common
+             - mediatek,mt8192-smi-common
+             - mediatek,mt8195-smi-common-vdo
+             - mediatek,mt8195-smi-common-vpp
+diff --git a/Documentation/devicetree/bindings/memory-controllers/mediatek,smi-larb.yaml b/Documentation/devicetree/bindings/memory-controllers/mediatek,smi-larb.yaml
+--- a/Documentation/devicetree/bindings/memory-controllers/mediatek,smi-larb.yaml
++++ b/Documentation/devicetree/bindings/memory-controllers/mediatek,smi-larb.yaml
+@@ -20,5 +20,6 @@ properties:
+           - mediatek,mt2712-smi-larb
+           - mediatek,mt6779-smi-larb
+           - mediatek,mt6795-smi-larb
++          - mediatek,mt6873-smi-larb
+           - mediatek,mt6893-smi-larb
+           - mediatek,mt8167-smi-larb
+@@ -119,6 +120,7 @@ allOf:
+               - mediatek,mt6779-smi-larb
+               - mediatek,mt8186-smi-larb
+               - mediatek,mt8188-smi-larb
++              - mediatek,mt6873-smi-larb
+               - mediatek,mt8192-smi-larb
+               - mediatek,mt8195-smi-larb
+ 
