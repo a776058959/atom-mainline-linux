@@ -244,17 +244,40 @@ frame was written. The directly observed failure matches a missing
 `mediatek,mt6873-disp-mutex` entry in `mtk_ddp_comp_dt_ids[]`: patch 0023 made
 the mutex driver match the node, but the DRM master could not classify that node
 as `MTK_DISP_MUTEX`. Patch 0038 adds the missing mapping and the topology
-checker now rejects its absence. This is a source-level root-cause fix until a
-new image is built and tested.
+checker now rejects its absence.
 
 The original recovery was restored and revalidated as
 `6a24c75e809bbae2dc062a91d922171a11cba261f6b0071bc93099ad73bd0fd6`;
 `boot`, `misc` and `dtbo` retained their original hashes.
 
+### V63: mutex mapping build prepared
+
+The mutex component mapping was isolated as patch 0038. Clean-tree validation
+and build both passed:
+
+```text
+DT Check run        46027955491  success
+Build Mainline run  46027960323  success
+Image.gz sha256     5c1b30891b30d0d3f72900a136819bdce91029ccf29181f6594748e7f9febca1
+DTB sha256          81c7fe8024106e657f51bf338869d439f979f97790003744bb98b91568187b25
+```
+
+The recovery-only V63 package passed all 59 checks:
+
+```text
+image size      16050176
+image sha256    8fa1d18ba959cdc6c9592a0fcc9a2d878f2f77a7581c19087180ee457444f2d6
+ramdisk sha256  6c91fbaa6030cb28b2a4c92804752e03a939638b737fe4696dcd1cbb96ce3e78
+dt_table sha256 744eeb82e42e84273ea4c226b01eabc153e44efda172344385b3b545ea7e6f80
+```
+
+The flasher and recovery-restore dry-runs rechecked the connected
+`M2004J7AC / mt6873` device and original partition hashes. V63 has not been
+written to the phone.
+
 ## Pending
 
-- build and validate a new recovery-only image with patch 0038;
-- Stage C2b DRM master bind and first-frame hardware validation;
+- Stage C2b V63 DRM master bind and first-frame hardware validation;
 - full DRM component chain and routing;
 - MT6873 SMI traffic validation, LARB0 WRR handling and legacy IOMMU bank
   fault-reporting;

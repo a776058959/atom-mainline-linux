@@ -167,3 +167,27 @@ Evidence:
 D:\820Linux\dumps\drm-pipeline-v62-20261127\20261127-233135\
 console-ramoops-2 sha256 eab0343daf7af3d804f896c45e1ac9f7bc7c67570e892430e924d4340c961539
 ```
+
+## V63 build
+
+Patch 0038 was validated against a clean Linux `v6.18.59` tree:
+
+```text
+DT Check run        46027955491  success
+Build Mainline run  46027960323  success
+Image.gz sha256     5c1b30891b30d0d3f72900a136819bdce91029ccf29181f6594748e7f9febca1
+DTB sha256          81c7fe8024106e657f51bf338869d439f979f97790003744bb98b91568187b25
+```
+
+The V63 recovery-only image reuses the validated first-frame diagnostic and
+changes only the version marker plus the kernel:
+
+```text
+image size      16050176
+image sha256    8fa1d18ba959cdc6c9592a0fcc9a2d878f2f77a7581c19087180ee457444f2d6
+ramdisk sha256  6c91fbaa6030cb28b2a4c92804752e03a939638b737fe4696dcd1cbb96ce3e78
+dt_table sha256 744eeb82e42e84273ea4c226b01eabc153e44efda172344385b3b545ea7e6f80
+```
+
+All 59 assembly checks passed, the flasher dry-run passed, and the recovery
+restore dry-run reported `already-restored`. The phone was not modified.
