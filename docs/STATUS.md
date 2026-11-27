@@ -92,6 +92,14 @@ verify:
 
 Probe does not run panel prepare/display-on. Screen output remains Stage C.
 
+The public `DT Check` workflow run `45933305710` on
+`display/stage-b-panel` completed successfully. The generated 59,750-byte DTB
+has SHA-256
+`f0882fc50772625adfb21fd148a00b753f528a26f6bdf6d9790a304f96a73900`.
+It differs from the hardware-tested Stage A DTB only by the panel status
+property. A recovery-only image passed 43 local assembly checks, but has not
+been flashed or booted.
+
 ## Pending
 
 - full DRM/OVL/RDMA chain;
