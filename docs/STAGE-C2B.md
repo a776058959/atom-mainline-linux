@@ -226,3 +226,26 @@ the vendor-confirmed DSI0 bit and the topology checker now requires it.
 Expected V64 evidence is a nonzero RDMA frame-end interrupt count and no
 `vblank wait timed out` warning. A visible white frame remains a separate
 functional result.
+
+## V64 build
+
+Patch 0039 passed clean-tree validation and compilation:
+
+```text
+DT Check run        46036375152  success
+Build Mainline run  46036381292  success
+Image.gz sha256     411e07241dc9ea0634ad40a8e230005d4e0467abaf73b53e25da635df329bfc1
+DTB sha256          81c7fe8024106e657f51bf338869d439f979f97790003744bb98b91568187b25
+```
+
+The V64 recovery-only image passed all 59 assembly checks:
+
+```text
+image size      16050176
+image sha256    6194f12b7fa5ea4e671a505067a663af4b0ea44fd84492bfc377165dfc6a7953
+ramdisk sha256  1d36629bf44997352b6b98c1fb24e3636d640aab86dfb5e075861617b2c49d6e
+dt_table sha256 744eeb82e42e84273ea4c226b01eabc153e44efda172344385b3b545ea7e6f80
+```
+
+The flasher and restore dry-runs passed against the connected
+`M2004J7AC / mt6873` device. No partition has been modified.

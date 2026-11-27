@@ -298,9 +298,32 @@ but omitted DSI0. Patch 0039 adds only that missing mutex input. V64 must verify
 nonzero RDMA completion interrupts and the disappearance of vblank timeout;
 visible output remains a separate hardware result.
 
+### V64: DSI0 mutex bit build prepared
+
+V64 includes patch 0039. Clean-tree validation and build both passed:
+
+```text
+DT Check run        46036375152  success
+Build Mainline run  46036381292  success
+Image.gz sha256     411e07241dc9ea0634ad40a8e230005d4e0467abaf73b53e25da635df329bfc1
+DTB sha256          81c7fe8024106e657f51bf338869d439f979f97790003744bb98b91568187b25
+```
+
+The V64 recovery-only image passed all 59 assembly checks:
+
+```text
+image size      16050176
+image sha256    6194f12b7fa5ea4e671a505067a663af4b0ea44fd84492bfc377165dfc6a7953
+ramdisk sha256  1d36629bf44997352b6b98c1fb24e3636d640aab86dfb5e075861617b2c49d6e
+dt_table sha256 744eeb82e42e84273ea4c226b01eabc153e44efda172344385b3b545ea7e6f80
+```
+
+The flasher dry-run passed and the restore dry-run reported
+`already-restored`. V64 has not been written to the phone.
+
 ## Pending
 
-- build and validate V64 with the DSI0 mutex module bit;
+- V64 recovery-only hardware validation;
 - Stage C2b first-frame completion and visible-output validation;
 - full DRM component chain and routing;
 - MT6873 SMI traffic validation, LARB0 WRR handling and legacy IOMMU bank
