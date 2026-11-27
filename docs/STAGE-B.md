@@ -67,4 +67,26 @@ changed node. Its non-status properties are identical; only the status
 changed from `disabled` to `okay`.
 
 The recovery-only image preparation gate also passed all 43 local assembler
-checks. It has not been flashed or booted.
+checks. It was subsequently booted on the device.
+
+## Hardware result
+
+Stage B passed the panel-probe and DSI-attach gate:
+
+- `14010000.dsi.0` bound `panel-samsung-s6e8fc01`;
+- the panel held the VIBR regulator consumer without enabling it
+  (`use=0 open=1`, 3.0 V);
+- GPIO29 `enable` and GPIO42 `reset` were acquired and remained low;
+- successful probe proves `mipi_dsi_attach()` returned zero;
+- the PHY/DSI IRQ/clocks/power domain remained healthy;
+- the MIPI PLL remained off, as expected before panel power-on;
+- no panel probe failure or deferred-probe entry appeared.
+
+The kernel emitted three pairs of fw_devlink `Fixed dependency cycle(s)`
+messages between the DSI host and panel. These are info-level cycle repairs,
+not probe failures, but the graph/link topology should be reviewed before
+Stage C.
+
+The original recovery was restored and the protected partitions remained
+unchanged. This does not prove panel initialization, PLL lock, DSI transfer,
+a first frame, backlight or interactive display.
