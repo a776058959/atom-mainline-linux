@@ -42,4 +42,3 @@ Those belong to later full-DRM and panel-power tests.
 The `DT Check` workflow must pass on this branch before any recovery image is
 assembled. Binary vendor dtbo fixtures are intentionally not present in this
 public repository; source-level placeholder and symbol checks still run.
-
