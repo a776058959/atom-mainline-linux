@@ -168,7 +168,7 @@ The providers remained runtime-suspended because no device consumes
 `#iommu-cells` yet. This does not prove DMA mapping, TLB operations, fault
 recovery, SMI traffic or display output.
 
-### Stage C2a: OVL/RDMA provider probe prepared, hardware pending
+### Stage C2a: OVL/RDMA provider probe complete on hardware
 
 Stage C2a enables only OVL0, OVL0-2L and RDMA0. The nodes use explicit MT6873
 compatibles with narrow MT8192/MT8183 driver-data fallbacks, verified MT6873
@@ -190,12 +190,27 @@ DTB sha256       81c7fe8024106e657f51bf338869d439f979f97790003744bb98b91568187b2
 
 The recovery-only V61 image passed 57 static assembly checks and has SHA-256
 `f7a2763726a30003499c2ceb713f8192a1ac8a012e89ee51483b358f04534a2f`.
-It has not been written to the phone. Hardware probe, IOMMU group membership,
-DMA mapping, TLB behavior, DRM component binding and scanout remain pending.
+It was then run once on the phone and restored afterward.
+
+Direct hardware observations:
+
+- OVL0 and OVL0-2L bound `mediatek-disp-ovl`;
+- RDMA0 bound `mediatek-disp-rdma`;
+- OVL0/RDMA0 linked to LARB0 and OVL0-2L linked to LARB1;
+- all three consumers joined IOMMU group 0 with type `DMA`;
+- the three display IRQs were registered and had zero occurrences;
+- the DISP power domain was on; idle providers remained runtime-suspended;
+- no DRM card was created, enforcing the no-scanout boundary.
+
+The log and analyzer passed all V61 gates. The original recovery was restored
+and every protected partition hash was revalidated.
+
+DMA mapping, TLB invalidation, OVL/RDMA traffic, DRM component binding and
+scanout remain unverified.
 
 ## Pending
 
-- Stage C2a OVL/RDMA provider probe on hardware;
+- DRM component-master registration for MT6873 MMSYS;
 - full DRM component chain and routing;
 - MT6873 SMI traffic validation, LARB0 WRR handling and legacy IOMMU bank
   fault-reporting;

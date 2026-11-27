@@ -111,6 +111,31 @@ This proves provider probe and component links only. DMA mapping, TLB
 invalidation, fault recovery, SMI traffic, suspend/resume and screen output
 remain unverified.
 
+## Display Stage C2a
+
+The recovery-only V61 image enabled OVL0, OVL0-2L and RDMA0 without registering
+MMSYS as a DRM component master. The kernel was `v6.18.59`, and the console
+snapshots showed:
+
+```text
+14005000.ovl   -> mediatek-disp-ovl -> LARB0
+14006000.ovl   -> mediatek-disp-ovl -> LARB1
+14007000.rdma  -> mediatek-disp-rdma -> LARB0
+```
+
+All three consumers joined IOMMU group 0 with type `DMA`. IRQ 311, 312 and
+313 were registered and remained at zero occurrences. The DISP power domain
+was on; idle providers stayed runtime-suspended with their display clocks
+disabled. No OVL/RDMA probe failure or deferred-probe entry was observed.
+
+The no-scanout gate also held: `/sys/class/drm/card0` and `/dev/dri/card0`
+were absent. The expected controlled panic produced the pstore record, and
+the original recovery plus protected partition hashes were restored and
+verified afterward.
+
+This does not prove DMA mapping, TLB invalidation, RDMA/OVL traffic, a DRM
+modeset or visible output.
+
 ## Evidence discipline
 
 Historical test images intentionally ended in a controlled panic so pstore

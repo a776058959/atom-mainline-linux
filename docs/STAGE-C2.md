@@ -153,8 +153,8 @@ DTB sha256       81c7fe8024106e657f51bf338869d439f979f97790003744bb98b91568187b2
 ```
 
 The local recovery-only V61 image, diagnostic ramdisk and complete static
-verification were assembled from these exact outputs. They have not been
-written to the phone:
+verification were assembled from these exact outputs and later used for the
+hardware test below:
 
 ```text
 ramdisk sha256  9ca038f2b40769ab0e8de062dbc8557e6c5745f0193190176247de46fb289af6
@@ -163,5 +163,42 @@ image size      16050176
 ```
 
 This proves compilation, patch application, DTB assembly, schema conformance
-and image structure. It does not prove provider probe, IOMMU group membership,
-DMA mapping, TLB behavior or any display function.
+and image structure at that point.
+
+## Hardware result
+
+The recovery-only V61 image was run once and returned to Android normally
+after its controlled panic. The analyzer passed every required and forbidden
+check.
+
+Directly observed:
+
+- all three MT6873 compatible pairs reached the device tree;
+- `14005000.ovl` and `14006000.ovl` bound `mediatek-disp-ovl`;
+- `14007000.rdma` bound `mediatek-disp-rdma`;
+- OVL0 and RDMA0 linked to LARB0, while OVL0-2L linked to LARB1;
+- all three consumers joined IOMMU group 0 with type `DMA`;
+- IRQ 311, 312 and 313 were registered with zero occurrences;
+- the DISP power domain was on, while the idle providers remained suspended
+  with zero clock enable count;
+- `/sys/class/drm/card0` and `/dev/dri/card0` remained absent;
+- no OVL/RDMA probe failure or deferred-probe entry was captured.
+
+The console record also contains the expected userspace-triggered panic. A
+post-panic `pstore: backend (ramoops) writing error (-28)` was observed, but
+the console record still contains the complete probe snapshots and panic path.
+
+Evidence:
+
+```text
+console-ramoops-2 sha256
+48eaff89c100b886395c19d492afc45959aa2e09cd4032518c5713d842fc3c5c
+
+analysis sha256
+0a0050b53551c5d32ed4aa9d8731ff67e327486c4985fa22c34a753395dbe918
+```
+
+This hardware result proves provider probe, LARB/IOMMU consumer attachment
+and the no-DRM-card safety boundary. It does not prove DMA mapping, TLB
+invalidation, engine traffic, DRM component binding, a modeset or visible
+display output.
