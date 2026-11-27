@@ -168,9 +168,33 @@ The providers remained runtime-suspended because no device consumes
 `#iommu-cells` yet. This does not prove DMA mapping, TLB operations, fault
 recovery, SMI traffic or display output.
 
+### Stage C2a: OVL/RDMA provider probe prepared, hardware pending
+
+Stage C2a enables only OVL0, OVL0-2L and RDMA0. The nodes use explicit MT6873
+compatibles with narrow MT8192/MT8183 driver-data fallbacks, verified MT6873
+clock IDs, DIS power domain 17 and the reviewed IOMMU port IDs.
+
+Empty graph ports satisfy the upstream bindings without declaring a live
+display route. Color, CCORR, AAL, gamma, postmask, dither, OVL2-2L, RDMA4 and
+the DRM component master remain disabled.
+
+Public `DT Check` run `45986324981` and `Build Mainline` run `45986850835`
+completed successfully:
+
+```text
+Image.gz sha256  af8356e0209b3b367d4e19cce5a5bacbe0c11a29f6039d0a9e7d0e5270a00389
+DTB sha256       81c7fe8024106e657f51bf338869d439f979f97790003744bb98b91568187b25
+```
+
+The recovery-only V61 image passed 57 static assembly checks and has SHA-256
+`f7a2763726a30003499c2ceb713f8192a1ac8a012e89ee51483b358f04534a2f`.
+It has not been written to the phone. Hardware probe, IOMMU group membership,
+DMA mapping, TLB behavior, DRM component binding and scanout remain pending.
+
 ## Pending
 
-- full DRM/OVL/RDMA chain;
+- Stage C2a OVL/RDMA provider probe on hardware;
+- full DRM component chain and routing;
 - MT6873 SMI traffic validation, LARB0 WRR handling and legacy IOMMU bank
   fault-reporting;
 - IOMMU DMA mapping, TLB fault/recovery and suspend/resume;
