@@ -29,10 +29,19 @@ jobs:
             -O2 -Wall -Wextra -Werror \
             -Wl,-e,_start -Wl,--build-id=none \
             -o out/drmflip tools/drmflip.c
+          aarch64-linux-gnu-gcc \
+            -nostdlib -static -no-pie -ffreestanding \
+            -fno-builtin -fno-stack-protector \
+            -fno-unwind-tables -fno-asynchronous-unwind-tables \
+            -O2 -Wall -Wextra -Werror \
+            -DDRMFLIP_STRESS_FLIP_COUNT=600 \
+            -Wl,-e,_start -Wl,--build-id=none \
+            -o out/drmflip-stress tools/drmflip.c
           file out/drmflip
+          file out/drmflip-stress
           readelf -h out/drmflip
           readelf -l out/drmflip
-          sha256sum out/drmflip | tee out/drmflip.sha256
+          sha256sum out/drmflip out/drmflip-stress | tee out/drmflip.sha256
 
       - name: Upload probe
         uses: actions/upload-artifact@v4
@@ -40,4 +49,5 @@ jobs:
           name: drmflip-aarch64
           path: |
             out/drmflip
+            out/drmflip-stress
             out/drmflip.sha256
