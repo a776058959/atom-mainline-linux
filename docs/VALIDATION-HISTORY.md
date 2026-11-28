@@ -415,6 +415,22 @@ occurred. This proves real KMS page-flip presentation. It does not prove a full
 compositor, long-duration stress, independent panel power or the complete PQ
 chain.
 
+## Display Stage C2b V74 page-flip stress
+
+V74 reused the V70 kernel/DTB with a 600-flip stress build. Progress checkpoints
+from 60 through 600 all completed, followed by restoration of the original
+framebuffer and a successful drop-master operation. The user directly observed
+the intended slow red/blue block changes and final white frame.
+
+After stress, OVL remained `0x7fc003`, RDMA `0x67`, LARB0 retained its
+throttle/WRR/OSTD configuration, all four SMI gates remained enabled, and OVL
+IRQ reached 1356. No vblank timeout, OOM, WARN, BUG, Oops or display fault was
+logged.
+
+This proves approximately 600 consecutive completed flips over a short run.
+Multi-minute stability, memory pressure, compositor operation, independent
+panel power and the full PQ chain remain unverified.
+
 ## Evidence discipline
 
 Historical test images intentionally ended in a controlled panic so pstore

@@ -180,6 +180,13 @@ struct timespec {
 #define DRM_MODE_PAGE_FLIP_EVENT 0x01
 #define DRM_EVENT_FLIP_COMPLETE 0x02
 
+#ifndef DRMFLIP_STRESS_FLIP_COUNT
+#define DRMFLIP_STRESS_FLIP_COUNT 0
+#endif
+
+#define DRMFLIP_STRESS_LOG_INTERVAL 60
+#define DRMFLIP_STRESS_FRAMES_PER_COLOR 120
+
 #define fourcc_code(a, b, c, d) \
 	((u32)(a) | ((u32)(b) << 8) | ((u32)(c) << 16) | ((u32)(d) << 24))
 #define DRM_FORMAT_XRGB8888 fourcc_code('X', 'R', '2', '4')
@@ -436,7 +443,8 @@ static long add_fb(long fd, struct drm_mode_create_dumb *dumb,
 	return ret;
 }
 
-static long flip_and_wait(long fd, u32 crtc_id, u32 fb_id, u64 user_data)
+static long flip_and_wait(long fd, u32 crtc_id, u32 fb_id, u64 user_data,
+			  int verbose)
 {
 	struct drm_mode_crtc_page_flip flip;
 	union {
@@ -451,26 +459,36 @@ static long flip_and_wait(long fd, u32 crtc_id, u32 fb_id, u64 user_data)
 	flip.flags = DRM_MODE_PAGE_FLIP_EVENT;
 	flip.reserved = 0;
 	flip.user_data = user_data;
-	out_hex("PAGE_FLIP fb=", fb_id);
+	if (verbose)
+		out_hex("PAGE_FLIP fb=", fb_id);
 	ret = sys_ioctl(fd, DRM_IOCTL_MODE_PAGE_FLIP, &flip);
-	out_ret("PAGE_FLIP submit", ret);
-	if (ret)
+	if (ret) {
+		out_ret("PAGE_FLIP submit", ret);
 		return ret;
+	}
+	if (verbose)
+		out_ret("PAGE_FLIP submit", ret);
 
 	for (i = 0; i < 8; i++) {
 		struct drm_event_vblank *event = &event_buf.event;
 
 		ret = sys_read(fd, event_buf.raw, sizeof(event_buf.raw));
-		out_ret("event read", ret);
-		if (ret < 0)
+		if (ret < 0) {
+			out_ret("event read", ret);
 			return ret;
+		}
+		if (verbose)
+			out_ret("event read", ret);
 		if (ret < (long)sizeof(struct drm_event_vblank))
 			continue;
-		out_hex("event type=", event->base.type);
-		out_hex("event user=", event->user_data);
+		if (verbose) {
+			out_hex("event type=", event->base.type);
+			out_hex("event user=", event->user_data);
+		}
 		if (event->base.type == DRM_EVENT_FLIP_COMPLETE &&
 		    event->user_data == user_data) {
-			out_u64("event sequence=", event->sequence);
+			if (verbose)
+				out_u64("event sequence=", event->sequence);
 			return 0;
 		}
 	}
@@ -501,6 +519,10 @@ static int run(void)
 	long ret;
 	int status = 1;
 	u32 i;
+#if DRMFLIP_STRESS_FLIP_COUNT > 0
+	u32 stress_index;
+	u32 stress_fb;
+#endif
 
 	out("===== drmflip begin =====\n");
 	fd = sys_open("/dev/dri/card0");
@@ -605,21 +627,43 @@ static int run(void)
 		goto out_rm_red;
 	out_hex("blue fb=", blue_fb);
 
-	ret = flip_and_wait(fd, crtc_ids[0], red_fb, 0x1111);
+	ret = flip_and_wait(fd, crtc_ids[0], red_fb, 0x1111, 1);
 	if (ret)
 		goto out_rm_blue;
 	out("visible hold red=2s\n");
 	sleep_seconds(2);
 
-	ret = flip_and_wait(fd, crtc_ids[0], blue_fb, 0x2222);
+	ret = flip_and_wait(fd, crtc_ids[0], blue_fb, 0x2222, 1);
 	if (ret)
 		goto out_rm_blue;
 	out("visible hold blue=2s\n");
 	sleep_seconds(2);
+
+#if DRMFLIP_STRESS_FLIP_COUNT > 0
+	out_u64("stress begin count=", DRMFLIP_STRESS_FLIP_COUNT);
+	for (stress_index = 0;
+	     stress_index < DRMFLIP_STRESS_FLIP_COUNT;
+	     stress_index++) {
+		if ((stress_index / DRMFLIP_STRESS_FRAMES_PER_COLOR) & 1)
+			stress_fb = blue_fb;
+		else
+			stress_fb = red_fb;
+		ret = flip_and_wait(fd, crtc_ids[0], stress_fb,
+				    0x40000000ULL + stress_index, 0);
+		if (ret) {
+			out_u64("stress failed at=", stress_index);
+			goto out_rm_blue;
+		}
+		if ((stress_index + 1) % DRMFLIP_STRESS_LOG_INTERVAL == 0 ||
+		    stress_index + 1 == DRMFLIP_STRESS_FLIP_COUNT)
+			out_u64("stress progress=", stress_index + 1);
+	}
+	out("stress complete\n");
+#endif
 	status = 0;
 
 	if (current_fb) {
-		ret = flip_and_wait(fd, crtc_ids[0], current_fb, 0x3333);
+		ret = flip_and_wait(fd, crtc_ids[0], current_fb, 0x3333, 1);
 		if (ret) {
 			status = 1;
 			goto out_rm_blue;

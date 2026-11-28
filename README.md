@@ -58,7 +58,9 @@ read-only hardware-test fixtures.
   `card0` from an independent userspace client, enabled atomic/universal-plane
   capabilities and allocated/destroyed a DRM dumb buffer successfully. V73
   completed real double-buffered KMS page flips to visible red and blue frames,
-  received all flip-complete events and restored the original framebuffer.
+  received all flip-complete events and restored the original framebuffer. V74
+  completed 600 additional page flips with stable registers and no display
+  errors.
 
 See [docs/STATUS.md](docs/STATUS.md) for completed and pending work, and
 [docs/VALIDATION-HISTORY.md](docs/VALIDATION-HISTORY.md) for evidence limits.

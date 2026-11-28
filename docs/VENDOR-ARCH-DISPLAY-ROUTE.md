@@ -122,4 +122,5 @@ disappeared and the physical panel showed colored Linux console output plus a
 white framebuffer. V71 then displayed six timed white/gray framebuffer updates
 without visual or logged display faults. V72/V73 then opened the mainline DRM
 node as an independent KMS client and completed real double-buffered page
-flips to visible red and blue framebuffers.
+flips to visible red and blue framebuffers. V74 sustained 600 completed flips
+without renewed underflow, vblank timeout or display fault.

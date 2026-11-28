@@ -557,10 +557,21 @@ The tool exited zero and dropped DRM master. OVL/RDMA/LARB/SMI state remained
 stable with no vblank timeout or display fault. Real mainline KMS page-flip
 presentation is now hardware-validated.
 
+V74 ran the same kernel/DTB with a 600-flip stress build. Every progress
+checkpoint from 60 through 600 completed, followed by restoration of the
+original framebuffer and `DROP_MASTER=0`. The user observed the intended slow
+red/blue block changes. OVL remained `0x7fc003`, RDMA remained `0x67`, LARB and
+all SMI gates stayed enabled, OVL IRQ reached 1356, and no vblank timeout,
+OOM, WARN or display fault occurred.
+
+Sustained short-duration KMS page flipping is now hardware-validated. Remaining
+work is longer-duration/memory-pressure stress, a real compositor and
+bootloader-independent panel power.
+
 ## Pending
 
 - long-running display stability;
-- long-duration and memory-pressure KMS stability;
+- multi-minute and memory-pressure KMS stability;
 - standalone panel/backlight power-up without relying on LK pre-initialization;
 - Weston or another full userspace compositor;
 - complete vendor PQ component chain and routing;

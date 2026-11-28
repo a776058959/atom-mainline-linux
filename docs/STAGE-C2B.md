@@ -587,3 +587,25 @@ timeout or display fault.
 This closes the raw mainline KMS page-flip gate. Remaining work is a full
 userspace compositor, longer-duration stress, independent panel power and the
 complete PQ chain.
+
+## V74 page-flip stress
+
+V74 reused the V70 kernel/DTB and ran `drmflip-stress` with 600 additional
+flips. The tool logged every 60th completed flip through `stress progress=600`,
+then restored the original framebuffer and dropped master with exit status
+zero. The physical panel showed the intended slow red/blue block changes.
+
+After the run:
+
+```text
+OVL status       0x007fc003
+RDMA status      0x00000067
+LARB0 throttle   0x00370256
+LARB0 WRR2/3     0x7 / 0x7
+LARB0 OSTD2      0x00002828
+OVL IRQ          1356
+```
+
+No vblank timeout, OOM, WARN, BUG, Oops or display fault occurred. This proves
+sustained short-duration page flipping, not multi-hour stability or memory
+pressure under many independent buffers.
