@@ -32,6 +32,15 @@ The patches apply in numeric order to a clean Linux `v6.18.59` tree.
 0039          MT6873 DSI0 disp-mutex module bit
 0040          MT6873 OVL start and output settings
 0041          MT6873 RDMA FIFO driver data
+0042          MT6873 OVL clock-enable bits
+0043          MT6873 display register diagnostics
+0044          MT6873 OVL real-time read thresholds
+0045          MT6873 RDMA video-mode threshold
+0046          MT6873 LARB0 WRR programming
+0047          Expanded MT6873 display diagnostics
+0048          MT6873 LARB configuration at component bind
+0049          MT6873 SMI gate clocks
+0050          S6E8FC01 standard DCS backlight
 ```
 
 Patches are evidence-backed pieces of an in-progress port, not a claim that

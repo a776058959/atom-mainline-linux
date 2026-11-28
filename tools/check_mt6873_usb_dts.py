@@ -1150,6 +1150,36 @@ def check_display_pipeline_providers(dts, base, patch_root):
             )
 
 
+def check_s6e8fc01_backlight(patch_root):
+    patch = (
+        Path(patch_root)
+        / "0050-drm-panel-s6e8fc01-add-dcs-backlight-v6.18.patch"
+    ).read_text(encoding="utf-8")
+
+    for marker in (
+        "+#include <linux/backlight.h>",
+        "+#define S6E8FC01_DEFAULT_BRIGHTNESS\t1023",
+        "+#define S6E8FC01_MAX_BRIGHTNESS\t2047",
+        "+static const struct backlight_ops s6e8fc01_backlight_ops",
+        "+	.update_status = s6e8fc01_backlight_update_status,",
+        "+\treturn s6e8fc01_write_brightness(ctx, backlight_get_brightness(bl));",
+        "+	ctx->backlight = devm_backlight_device_register(dev, dev_name(dev), dev,",
+        "+	depends on BACKLIGHT_CLASS_DEVICE",
+    ):
+        if marker not in patch:
+            raise SystemExit(
+                "[FATAL] 0050 missing S6E8FC01 DCS backlight marker: "
+                + marker
+            )
+
+    for forbidden in ("root,backlight", "display,backlight", "of_find_backlight_by_node"):
+        if forbidden in patch:
+            raise SystemExit(
+                "[FATAL] 0050 must not invent an external backlight phandle: "
+                + forbidden
+            )
+
+
 def check_drm_component_master(patch_root):
     patch_path = (
         Path(patch_root)
@@ -1739,13 +1769,14 @@ def main():
     check_mutex_consumer(dts, args.patch_root)
     check_smi_providers(dts, args.patch_root)
     check_display_pipeline_providers(dts, base, args.patch_root)
+    check_s6e8fc01_backlight(args.patch_root)
     check_drm_component_master(args.patch_root)
     check_unsupported_inherited_consumers(dts)
     check_vendor_dtbo_symbols(dts, base)
     check_i2c5_mt6360(dts, args.patch_root)
     check_topology(dts)
     print(
-        "[ok] MT6873 formal DTS USB/UFS/I2C5/SMI/IOMMU/OVL/RDMA/DRM "
+        "[ok] MT6873 formal DTS USB/UFS/I2C5/SMI/IOMMU/OVL/RDMA/DRM/backlight "
         "topology and evidence checks passed"
     )
 

@@ -57,6 +57,8 @@ jobs:
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
           grep -q '^CONFIG_COMMON_CLK_MT6873=y$' .config
           grep -q '^CONFIG_DRM_MEDIATEK=y$' .config
+          grep -q '^CONFIG_BACKLIGHT_CLASS_DEVICE=y$' .config
+          grep -q '^CONFIG_DRM_PANEL_SAMSUNG_S6E8FC01=y$' .config
           grep -q '^CONFIG_SCSI_UFS_MEDIATEK=y$' .config
           grep -q '^CONFIG_MTK_SMI=y$' .config
           grep -q '^CONFIG_MTK_IOMMU=y$' .config

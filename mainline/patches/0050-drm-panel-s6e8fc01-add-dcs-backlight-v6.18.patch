@@ -1,0 +1,131 @@
+diff --git a/drivers/gpu/drm/panel/Kconfig b/drivers/gpu/drm/panel/Kconfig
+--- a/drivers/gpu/drm/panel/Kconfig
++++ b/drivers/gpu/drm/panel/Kconfig
+@@ -726,6 +726,7 @@ config DRM_PANEL_SAMSUNG_S6E8FC01
+ 	tristate "Samsung S6E8FC01 AMOLED DSI video-mode panel"
+ 	depends on GPIOLIB && OF && REGULATOR
++	depends on BACKLIGHT_CLASS_DEVICE
+ 	depends on DRM_MIPI_DSI
+ 	help
+ 	  Say Y here if you want to enable support for the Samsung
+diff --git a/drivers/gpu/drm/panel/panel-samsung-s6e8fc01.c b/drivers/gpu/drm/panel/panel-samsung-s6e8fc01.c
+--- a/drivers/gpu/drm/panel/panel-samsung-s6e8fc01.c
++++ b/drivers/gpu/drm/panel/panel-samsung-s6e8fc01.c
+@@ -4,6 +4,7 @@
+  * Copyright (c) 2021 XiaoMi, Inc.
+  */
+ 
++#include <linux/backlight.h>
+ #include <linux/delay.h>
+ #include <linux/gpio/consumer.h>
+ #include <linux/module.h>
+@@ -14,9 +15,13 @@
+ #include <drm/drm_modes.h>
+ #include <drm/drm_panel.h>
+ 
++#define S6E8FC01_DEFAULT_BRIGHTNESS	1023
++#define S6E8FC01_MAX_BRIGHTNESS	2047
++
+ struct s6e8fc01 {
+ 	struct drm_panel panel;
+ 	struct mipi_dsi_device *dsi;
++	struct backlight_device *backlight;
+ 	struct regulator *supply;
+ 	struct gpio_desc *enable_gpio;
+ 	struct gpio_desc *reset_gpio;
+@@ -45,9 +50,24 @@
+ 		s6e8fc01_write_cmd(&(dsi_ctx), data, ARRAY_SIZE(data));	\
+ 	} while (0)
+ 
++static int s6e8fc01_write_brightness(struct s6e8fc01 *ctx, u16 brightness)
++{
++	struct mipi_dsi_multi_context dsi_ctx = { .dsi = ctx->dsi };
++	const u8 payload[] = {
++		0x51,
++		(brightness >> 8) & 0x07,
++		brightness & 0xff,
++	};
++
++	s6e8fc01_write_cmd(&dsi_ctx, payload, sizeof(payload));
++
++	return dsi_ctx.accum_err;
++}
++
+ static int s6e8fc01_on(struct s6e8fc01 *ctx)
+ {
+ 	struct mipi_dsi_multi_context dsi_ctx = { .dsi = ctx->dsi };
++	int ret;
+ 
+ 	S6E8FC01_WRITE_SEQ(dsi_ctx, 0x11);
+ 	mipi_dsi_msleep(&dsi_ctx, 20);
+@@ -86,7 +106,9 @@ static int s6e8fc01_on(struct s6e8fc01 *ctx)
+ 	S6E8FC01_WRITE_SEQ(dsi_ctx, 0xb1, 0x80);
+ 	S6E8FC01_WRITE_SEQ(dsi_ctx, 0xf0, 0xa5, 0xa5);
+ 	S6E8FC01_WRITE_SEQ(dsi_ctx, 0x53, 0x20);
+-	S6E8FC01_WRITE_SEQ(dsi_ctx, 0x51, 0x03, 0xff);
++	ret = s6e8fc01_write_brightness(ctx, ctx->backlight->props.brightness);
++	if (ret)
++		return ret;
+ 	mipi_dsi_msleep(&dsi_ctx, 60);
+ 	S6E8FC01_WRITE_SEQ(dsi_ctx, 0x29);
+ 
+@@ -193,8 +215,44 @@ static int s6e8fc01_get_modes(struct drm_panel *panel,
+ 	return 1;
+ }
+ 
++static int s6e8fc01_backlight_update_status(struct backlight_device *bl)
++{
++	struct s6e8fc01 *ctx = bl_get_data(bl);
++
++	if (!ctx->prepared)
++		return 0;
++
++	return s6e8fc01_write_brightness(ctx, backlight_get_brightness(bl));
++}
++
++static const struct backlight_ops s6e8fc01_backlight_ops = {
++	.update_status = s6e8fc01_backlight_update_status,
++};
++
++static int s6e8fc01_enable(struct drm_panel *panel)
++{
++	struct s6e8fc01 *ctx = to_s6e8fc01(panel);
++
++	return backlight_enable(ctx->backlight);
++}
++
++static int s6e8fc01_disable(struct drm_panel *panel)
++{
++	struct s6e8fc01 *ctx = to_s6e8fc01(panel);
++
++	return backlight_disable(ctx->backlight);
++}
++
++static const struct backlight_properties s6e8fc01_backlight_props = {
++	.type = BACKLIGHT_RAW,
++	.brightness = S6E8FC01_DEFAULT_BRIGHTNESS,
++	.max_brightness = S6E8FC01_MAX_BRIGHTNESS,
++};
++
+ static const struct drm_panel_funcs s6e8fc01_panel_funcs = {
+ 	.prepare = s6e8fc01_prepare,
++	.enable = s6e8fc01_enable,
++	.disable = s6e8fc01_disable,
+ 	.unprepare = s6e8fc01_unprepare,
+ 	.get_modes = s6e8fc01_get_modes,
+ };
+@@ -228,6 +286,14 @@ static int s6e8fc01_probe(struct mipi_dsi_device *dsi)
+ 
+ 	ctx->dsi = dsi;
+ 	mipi_dsi_set_drvdata(dsi, ctx);
++
++	ctx->backlight = devm_backlight_device_register(dev, dev_name(dev), dev,
++							ctx,
++							&s6e8fc01_backlight_ops,
++							&s6e8fc01_backlight_props);
++	if (IS_ERR(ctx->backlight))
++		return dev_err_probe(dev, PTR_ERR(ctx->backlight),
++				     "Failed to register backlight\n");
+ 
+ 	dsi->lanes = 4;
+ 	dsi->format = MIPI_DSI_FMT_RGB888;
