@@ -297,6 +297,7 @@ static void sleep_seconds(long seconds)
 	sc3(SYS_nanosleep, (long)&ts, 0, 0);
 }
 
+#if DRMFLIP_STRESS_FLIP_COUNT > 0
 static u64 monotonic_seconds(void)
 {
 	struct timespec ts;
@@ -309,6 +310,7 @@ static u64 monotonic_seconds(void)
 		return 0;
 	return ts.tv_sec;
 }
+#endif
 
 static u64 string_len(const char *text)
 {
