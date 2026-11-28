@@ -545,12 +545,25 @@ white-frame path remained stable with no warnings or vblank timeouts.
 The probe did not yet map a framebuffer, submit a page flip or wait for a flip
 completion event. Real DRM page-flip remains the next functional gate.
 
+V73 added a reviewed freestanding `drmflip` tool using the same V70 kernel and
+DTB. It acquired DRM master, read CRTC 59 at 1080x2400/63 Hz, allocated and
+mapped two 10,368,000-byte dumb buffers, created framebuffers 62 and 63, and
+submitted three legacy page flips. Red, blue and the original framebuffer all
+received `DRM_EVENT_FLIP_COMPLETE` events at sequences 295, 407 and 520. The
+user observed approximately two seconds of red, two seconds of blue, the
+original console restored, and then the white frame.
+
+The tool exited zero and dropped DRM master. OVL/RDMA/LARB/SMI state remained
+stable with no vblank timeout or display fault. Real mainline KMS page-flip
+presentation is now hardware-validated.
+
 ## Pending
 
 - long-running display stability;
-- DRM framebuffer add/map and page-flip completion;
+- long-duration and memory-pressure KMS stability;
 - standalone panel/backlight power-up without relying on LK pre-initialization;
-- full DRM component chain and routing;
+- Weston or another full userspace compositor;
+- complete vendor PQ component chain and routing;
 - MT6873 SMI traffic validation, LARB0 WRR handling and legacy IOMMU bank
   fault-reporting;
 - IOMMU DMA mapping, TLB fault/recovery and suspend/resume;

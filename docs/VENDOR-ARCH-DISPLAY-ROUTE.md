@@ -120,4 +120,6 @@ IDs to real MMSYS gates. V70 validated that change on hardware: all four gates
 reported `Y`, LARB0 retained its vendor configuration, vblank timeouts
 disappeared and the physical panel showed colored Linux console output plus a
 white framebuffer. V71 then displayed six timed white/gray framebuffer updates
-without visual or logged display faults.
+without visual or logged display faults. V72/V73 then opened the mainline DRM
+node as an independent KMS client and completed real double-buffered page
+flips to visible red and blue framebuffers.

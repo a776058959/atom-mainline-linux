@@ -559,3 +559,31 @@ The probe exited zero and the subsequent white-frame write completed with no
 display warning or vblank timeout. This establishes the KMS client and
 dumb-buffer prerequisites. It does not perform framebuffer mapping, `ADDFB2`,
 modeset, page flip or completion-event handling.
+
+## V73 raw DRM page flips
+
+V73 reused the exact V70 kernel and DTB and added a freestanding `drmflip`
+client. The direct log proves:
+
+```text
+SET_MASTER=0
+GETCRTC crtc=0x3b current-fb=0x3c mode=1080x2400@63
+CREATE_DUMB red/blue=0, 10,368,000 bytes, pitch 4320
+MAP_DUMB red/blue=0
+ADDFB2 red/blue=0, fb IDs 0x3e/0x3f
+PAGE_FLIP 0x3e -> FLIP_COMPLETE user 0x1111 sequence 295
+PAGE_FLIP 0x3f -> FLIP_COMPLETE user 0x2222 sequence 407
+PAGE_FLIP 0x3c -> FLIP_COMPLETE user 0x3333 sequence 520
+restored original framebuffer
+DROP_MASTER=0
+exit status=0
+```
+
+The physical panel showed solid red for about two seconds, solid blue for
+about two seconds, then the original console and final white frame. LARB0,
+OVL `0x7fc003`, RDMA `0x67` and the SMI gates remained stable, with no vblank
+timeout or display fault.
+
+This closes the raw mainline KMS page-flip gate. Remaining work is a full
+userspace compositor, longer-duration stress, independent panel power and the
+complete PQ chain.

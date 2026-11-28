@@ -56,7 +56,9 @@ read-only hardware-test fixtures.
   kept the same kernel and completed six visible white/gray framebuffer
   updates without corrupt colors, hangs or renewed underflow. V72 then opened
   `card0` from an independent userspace client, enabled atomic/universal-plane
-  capabilities and allocated/destroyed a DRM dumb buffer successfully.
+  capabilities and allocated/destroyed a DRM dumb buffer successfully. V73
+  completed real double-buffered KMS page flips to visible red and blue frames,
+  received all flip-complete events and restored the original framebuffer.
 
 See [docs/STATUS.md](docs/STATUS.md) for completed and pending work, and
 [docs/VALIDATION-HISTORY.md](docs/VALIDATION-HISTORY.md) for evidence limits.

@@ -391,6 +391,30 @@ no display warning or vblank timeout. It did not map the buffer, create a
 framebuffer, perform a modeset or submit a page flip. Real KMS presentation is
 therefore still unverified.
 
+## Display Stage C2b V73 raw KMS page flips
+
+V73 reused the V70 kernel and DTB and added a freestanding raw-ioctl
+`drmflip`. It acquired DRM master, read CRTC 59 in a 1080x2400/63 Hz mode, and
+allocated, mapped and registered two full-size 10,368,000-byte XRGB8888 dumb
+buffers.
+
+Three legacy page flips completed:
+
+```text
+red fb 0x3e    -> FLIP_COMPLETE sequence 295
+blue fb 0x3f   -> FLIP_COMPLETE sequence 407
+original 0x3c  -> FLIP_COMPLETE sequence 520
+```
+
+The user directly observed approximately two seconds of red, two seconds of
+blue, restoration of the original framebuffer and the final white frame. The
+tool restored the original framebuffer, dropped master and exited zero.
+
+OVL/RDMA/LARB/SMI state remained stable and no vblank timeout or display fault
+occurred. This proves real KMS page-flip presentation. It does not prove a full
+compositor, long-duration stress, independent panel power or the complete PQ
+chain.
+
 ## Evidence discipline
 
 Historical test images intentionally ended in a controlled panic so pstore
