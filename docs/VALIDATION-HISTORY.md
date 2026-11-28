@@ -272,6 +272,54 @@ hash after writing is
 No reboot was performed. Functional effect remains unverified until the V68
 recovery run completes.
 
+## Display Stage C2b V68 hardware result
+
+V68 executed successfully. All intended OVL GMC/FIFO/GREQ/buffer and RDMA
+video-threshold writes were present in the kernel-side snapshot. DSI remained
+active, but RDMA IRQ 313 remained zero and the initial three vblank waits timed
+out.
+
+OVL status remained `0x6025`, and RDMA status `0x77` retained FIFO-underflow
+and FIFO-empty flags. LARB0 was not configured as vendor source requires:
+throttle read `0x370246`, WRR ports 2/3 were zero, and OSTD ports read
+`0x3f3f`.
+
+Patch 0048 configures MT6873 LARBs during IOMMU component bind, holds their
+runtime-PM reference for the component lifetime, and logs immediate register
+readback. The next hardware run must verify both the LARB readback and whether
+the OVL/RDMA underflow clears.
+
+## Display Stage C2b V69 build and flash
+
+V69 passed build run `46131176338` with kernel SHA-256
+`4fa93f9ad287da91b35417f42979b2635fa9656a8b875d51032b923e2597b2ed`.
+Its recovery image passed all 59 assembly checks and has SHA-256
+`d9caef909f6ed9e61d7df499cb781ecfdca9e2d33bbe21103dae8b330434f6d5`.
+
+The candidate prefix read back exactly. The original flash command used a
+1 MiB write block and altered only the unused post-image gap in the final
+padded block; recovery bytes from 16 MiB onward matched the backup. The write
+scripts now use 4 KiB blocks.
+
+## Display Stage C2b V69 hardware result
+
+V69 booted in recovery and forced LARB configuration during IOMMU component
+bind. The immediate readback nevertheless remained the hardware default:
+
+```text
+larb0 thrt=0x370246 wrr2=0x0 wrr3=0x0 ostd2=0x3f3f
+larb1 thrt=0x370246 wrr2=0x0 wrr3=0x0 ostd2=0x3f3f
+```
+
+The delayed snapshot matched V68: OVL status `0x6025`, RDMA status `0x77`,
+RDMA IRQ 313 zero, and DSI IRQ 309 at 31. Three vblank waits timed out.
+
+The clock summary showed nonzero prepare/enable counts but `?` hardware state
+for all four SMI clocks. This is consistent with their upstream and vendor CCF
+definitions as dummy clocks, while the vendor power-domain callback clears
+MMSYS gate bits directly. Patch 0049 maps the same clock IDs to real MM0/MM1
+gates. V70 build and hardware execution have not occurred.
+
 ## Evidence discipline
 
 Historical test images intentionally ended in a controlled panic so pstore

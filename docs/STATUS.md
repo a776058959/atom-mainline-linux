@@ -431,9 +431,73 @@ partition hash is
 `627629d69b6d6c7c9e3910a568ed7aeafc6fb1fbe4f781c937473cb127491019`.
 The phone remained in Android and was not rebooted.
 
+V68 ran on hardware. Its OVL and RDMA tuning values were all present:
+
+```text
+ovl0[0x00c8]=0x03ff03ff
+ovl0[0x00d0]=0x01800000
+ovl0[0x01e0]=0x207f00ff
+ovl0[0x01f8]=0xf1ff7777
+ovl0[0x020c]=0x00008040
+rdma0[0x0040]=0x88c00000
+```
+
+The failure remained: OVL status was still `0x6025`, RDMA status was `0x77`
+with FIFO underflow/empty flags, RDMA IRQ 313 stayed zero and three vblank
+waits timed out. LARB0 did not retain the intended configuration:
+
+```text
+larb0[0x0024]=0x00370246
+larb0[0x0108]=0x00000000
+larb0[0x010c]=0x00000000
+larb0[0x0208]=0x00003f3f
+```
+
+The expected values are `0x370256`, WRR `0x7` for ports 2/3 and OSTD
+`0x28` for port 2. Patch 0048 forces MT6873 LARB configuration during IOMMU
+component bind, holds runtime PM until unbind, and logs immediate readback.
+
+V69 passed clean Linux `v6.18.59` build run `46131176338`:
+
+```text
+Image.gz sha256  4fa93f9ad287da91b35417f42979b2635fa9656a8b875d51032b923e2597b2ed
+DTB sha256       f041bf87b0b7b9df72be2e00b274c184b19eb7ea4625b5f0211f7ddd2288d665
+image sha256     d9caef909f6ed9e61d7df499cb781ecfdca9e2d33bbe21103dae8b330434f6d5
+```
+
+The image passed all 59 assembly checks. A 1 MiB-block write changed only the
+unused gap after the candidate inside the last padded block; the candidate
+prefix read back exactly, and every recovery byte from offset 16 MiB onward
+matched the backup. The V69 script now uses 4 KiB writes.
+
+V69 then ran in recovery. Its bind-time diagnostic readback was still
+`0x370246 / 0x0 / 0x0 / 0x3f3f`, proving that even the forced component-bind
+configuration did not remain in LARB0. The deferred diagnostic snapshot was
+unchanged: OVL status stayed `0x6025`, RDMA status stayed `0x77`, RDMA IRQ 313
+remained zero and all observed vblank waits timed out.
+
+The V69 initramfs clock dump identified the next concrete blocker. It read the
+following live `clk_summary` entries:
+
+```text
+mm_smi_common  2 2 0 0 0 0 ... ?  14002000.smi
+mm_smi_infra   2 2 0 0 0 0 ... ?  14002000.smi
+mm_smi_gals    3 3 0 0 0 0 ... ?  14002000.smi
+mm_smi_iommu   2 2 0 0 0 0 ... ?  1401d000.m4u
+```
+
+The nonzero prepare/enable counts prove that consumers requested the clocks;
+the `?` hardware state is the direct evidence that the clock provider has no
+gate backend. Patch 0020 had declared all four as `GATE_DUMMY`. Vendor CCF also
+marks them dummy, but vendor power-domain code separately clears MMSYS CG0
+bits 11/17/27 and CG1 bit 0. Patch 0049 now represents those four clocks as
+real MMSYS gates in upstream `mtk_clk_register_gates()`. V70 is not built or
+hardware-tested yet.
+
 ## Pending
 
-- V68 manual recovery boot and hardware validation;
+- V70 build and hardware validation of the four real SMI gates;
+- V70 confirmation that bind-time LARB throttle/WRR/OSTD values persist;
 - Stage C2b first-frame completion and visible-output validation;
 - full DRM component chain and routing;
 - MT6873 SMI traffic validation, LARB0 WRR handling and legacy IOMMU bank

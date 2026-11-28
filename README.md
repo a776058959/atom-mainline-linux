@@ -43,8 +43,14 @@ read-only hardware-test fixtures.
   IRQ. Patches 0044-0047 now port the vendor real-time OVL read thresholds,
   LARB0 WRR values, zero video-mode RDMA threshold and expanded SMI/IOMMU
   diagnostics. V68 built successfully and its recovery-only image was written
-  and read back byte-for-byte; hardware execution awaits a manual recovery
-  boot.
+  and read back byte-for-byte. Hardware confirmed every V68 OVL/RDMA tuning
+  value, but LARB0 still retained default OSTD/WRR values and the underflow
+  remained. Patch 0048 now forces MT6873 LARB configuration at IOMMU component
+  bind and keeps it active until unbind. V69 hardware execution still read
+  the same LARB defaults, while `clk_summary` exposed the cause: the four
+  MT6873 SMI clocks were registered as dummy gates, despite the vendor power
+  domain clearing the corresponding MMSYS gates. Patch 0049 converts those
+  four clocks to real gates. V70 remains to be built and tested.
 
 See [docs/STATUS.md](docs/STATUS.md) for completed and pending work, and
 [docs/VALIDATION-HISTORY.md](docs/VALIDATION-HISTORY.md) for evidence limits.

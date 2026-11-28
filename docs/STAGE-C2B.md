@@ -391,3 +391,63 @@ written; readback matched `bb2b8c...16e8`, and the full partition hash is
 `627629d69b6d6c7c9e3910a568ed7aeafc6fb1fbe4f781c937473cb127491019`.
 The device remained in Android. The new real-time settings and underflow
 behavior have not yet been observed in a V68 hardware run.
+
+## V68 hardware result
+
+V68's OVL real-time controls reached hardware exactly, including
+`GMC=0x03ff03ff`, FIFO size `0x01800000`, issue threshold `0x207f00ff`,
+GREQ `0xf1ff7777`, urgent GREQ `0x7777`, and RDMA video threshold
+`0x88c00000`.
+
+Output remained broken. OVL status stayed `0x6025`; RDMA status changed to
+`0x77`, retaining FIFO-underflow and FIFO-empty flags. RDMA IRQ 313 remained
+zero and three vblank waits timed out.
+
+LARB0 diagnostics exposed the next blocker: throttle was `0x370246` rather
+than `0x370256`, both WRR port registers were zero, and OSTD ports read
+`0x3f3f` instead of the vendor values. The LARB MMU enable bits were already
+set, indicating that the full MT6873 configuration had not remained applied.
+
+Patch 0048 forces the MT6873 LARB configuration during component bind,
+holds a runtime-PM reference until unbind, and logs the immediate register
+readback. V69 tests this state without changing the V68 OVL/RDMA values.
+
+## V69 build and flash
+
+V69 passed Build Mainline run `46131176338` with kernel SHA-256
+`4fa93f9ad287da91b35417f42979b2635fa9656a8b875d51032b923e2597b2ed`.
+The recovery image passed all 59 assembly checks and has SHA-256
+`d9caef909f6ed9e61d7df499cb781ecfdca9e2d33bbe21103dae8b330434f6d5`.
+
+Candidate-prefix readback matched exactly. The original 1 MiB-block `dd`
+changed only the unused gap after the candidate in the final padded block;
+all recovery bytes at or after offset 16 MiB still matched the backup. The
+flash scripts were corrected to use 4 KiB writes. The device was not rebooted.
+The LARB bind readback and underflow behavior remained to be observed.
+
+## V69 hardware result
+
+V69 booted and produced the new bind-time readback, but the forced
+configuration still did not stick:
+
+```text
+ATOM-DIAG-V69 larb0 thrt=0x370246 wrr2=0x0 wrr3=0x0 ostd2=0x3f3f
+ATOM-DIAG-V69 larb1 thrt=0x370246 wrr2=0x0 wrr3=0x0 ostd2=0x3f3f
+```
+
+The later snapshot remained unchanged: OVL status was `0x6025`, RDMA status
+was `0x77`, RDMA IRQ 313 was zero and three vblank waits timed out. DSI IRQ
+309 still held 31 events, so the failure remained downstream of DSI command
+traffic.
+
+The clock dump supplied the next direct evidence. `mm_smi_common`,
+`mm_smi_infra`, `mm_smi_gals` and `mm_smi_iommu` all had nonzero prepare/enable
+counts, but their hardware state was `?` because patch 0020 registered them as
+`GATE_DUMMY`. The vendor clock driver has the same dummy entries, while the
+vendor power-domain callback explicitly clears CG0 bits 11/17/27 and CG1 bit 0.
+
+Patch 0049 changes only those four clock descriptors to the corresponding
+`GATE_MM0`/`GATE_MM1` entries. No register value, clock ID, DTS property or
+display tuning value changes. V70 must first show `Y` for all four gates and
+then show the expected LARB values at component bind. Build and hardware
+execution are pending.
