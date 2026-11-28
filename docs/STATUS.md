@@ -491,14 +491,44 @@ the `?` hardware state is the direct evidence that the clock provider has no
 gate backend. Patch 0020 had declared all four as `GATE_DUMMY`. Vendor CCF also
 marks them dummy, but vendor power-domain code separately clears MMSYS CG0
 bits 11/17/27 and CG1 bit 0. Patch 0049 now represents those four clocks as
-real MMSYS gates in upstream `mtk_clk_register_gates()`. V70 is not built or
-hardware-tested yet.
+real MMSYS gates in upstream `mtk_clk_register_gates()`.
+
+V70 passed clean Linux `v6.18.59` Build Mainline run `46135235963`.
+The compiler warning/error scan was clean and the build log shows
+`drivers/clk/mediatek/clk-mt6873-mm.o` compiled:
+
+```text
+Image.gz sha256  27813ac1cebeb85cc89ac3bf59446ce57b6830df39974e6b94a9435412b6de3e
+DTB sha256       f041bf87b0b7b9df72be2e00b274c184b19eb7ea4625b5f0211f7ddd2288d665
+image sha256     90918d3f8db33888fa3f58ddd016cf94ae2161fb3cbd1a945c2eeffec10c998c
+```
+
+The recovery-only image is 16,054,272 bytes and passed all 59 assembly checks.
+The non-writing flash preflight confirmed the expected current recovery hash
+`3bcdb7329697cb200d3faae3aeeb8241b25c11cb15281338f4a0e4287c973468`.
+
+V70 was then written only to recovery and manually booted successfully. The
+four SMI clocks reported hardware-enabled `Y` at 546 MHz. LARB0 retained
+throttle `0x370256`, WRR ports 2/3 `0x7`, and OSTD port 2 readback `0x2828`.
+The physical panel displayed the Linux boot text, colored Linux penguin and a
+pure-white framebuffer.
+
+The previous vblank timeouts disappeared. OVL status changed from `0x6025` to
+`0x007fc003`, clearing FME underflow, RDMA0 abnormal EOF, RDMA0 SMI underflow
+and abnormal SOF. RDMA status changed from `0x77` to `0x67`, clearing FIFO
+underflow and abnormal EOF while leaving FIFO-empty latched. RDMA IRQ 313
+still read zero despite visible scanout and is now tracked as a non-blocking
+implementation anomaly.
+
+This establishes basic visible output for the direct `OVL0 -> RDMA0 -> DSI0`
+path. Animation, long-running stability, standalone panel power-up, userspace
+Weston and the full PQ chain remain unverified.
 
 ## Pending
 
-- V70 build and hardware validation of the four real SMI gates;
-- V70 confirmation that bind-time LARB throttle/WRR/OSTD values persist;
-- Stage C2b first-frame completion and visible-output validation;
+- continuous frame update, animation and long-running display stability;
+- standalone panel/backlight power-up without relying on LK pre-initialization;
+- explanation of the zero RDMA IRQ count despite working visible scanout;
 - full DRM component chain and routing;
 - MT6873 SMI traffic validation, LARB0 WRR handling and legacy IOMMU bank
   fault-reporting;

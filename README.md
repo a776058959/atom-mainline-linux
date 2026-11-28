@@ -50,7 +50,9 @@ read-only hardware-test fixtures.
   the same LARB defaults, while `clk_summary` exposed the cause: the four
   MT6873 SMI clocks were registered as dummy gates, despite the vendor power
   domain clearing the corresponding MMSYS gates. Patch 0049 converts those
-  four clocks to real gates. V70 remains to be built and tested.
+  four clocks to real gates. V70 then produced visible Linux console output,
+  a correctly colored Linux penguin and a pure-white framebuffer on hardware.
+  The vblank timeouts and primary OVL/RDMA underflow flags disappeared.
 
 See [docs/STATUS.md](docs/STATUS.md) for completed and pending work, and
 [docs/VALIDATION-HISTORY.md](docs/VALIDATION-HISTORY.md) for evidence limits.

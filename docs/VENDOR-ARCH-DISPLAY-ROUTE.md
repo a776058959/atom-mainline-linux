@@ -116,4 +116,7 @@ PQ path or the downstream power/clock sequence automatically.
 
 At the time of this note, V69 proved that the SMI clocks were registered as
 dummy gates even though consumers requested them. Patch 0049 maps the four
-IDs to real MMSYS gates. Hardware validation of that change is still pending.
+IDs to real MMSYS gates. V70 validated that change on hardware: all four gates
+reported `Y`, LARB0 retained its vendor configuration, vblank timeouts
+disappeared and the physical panel showed colored Linux console output plus a
+white framebuffer.

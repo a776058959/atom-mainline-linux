@@ -318,7 +318,45 @@ The clock summary showed nonzero prepare/enable counts but `?` hardware state
 for all four SMI clocks. This is consistent with their upstream and vendor CCF
 definitions as dummy clocks, while the vendor power-domain callback clears
 MMSYS gate bits directly. Patch 0049 maps the same clock IDs to real MM0/MM1
-gates. V70 build and hardware execution have not occurred.
+gates.
+
+## Display Stage C2b V70 build and preflight
+
+V70 passed Build Mainline run `46135235963`. The kernel SHA-256 is
+`27813ac1cebeb85cc89ac3bf59446ce57b6830df39974e6b94a9435412b6de3e`;
+the DTB hash remains
+`f041bf87b0b7b9df72be2e00b274c184b19eb7ea4625b5f0211f7ddd2288d665`.
+The compiler warning/error scan is clean and `clk-mt6873-mm.o` was built.
+
+The 16,054,272-byte recovery image has SHA-256
+`90918d3f8db33888fa3f58ddd016cf94ae2161fb3cbd1a945c2eeffec10c998c`
+and passed all 59 assembly checks. The read-only flash preflight matched the
+current V69 recovery hash
+`3bcdb7329697cb200d3faae3aeeb8241b25c11cb15281338f4a0e4287c973468`.
+
+## Display Stage C2b V70 hardware result
+
+V70 was written only to recovery and manually booted. The user directly
+observed Linux boot text, a correctly colored Linux penguin and a pure-white
+framebuffer on the physical panel.
+
+The kernel log confirms that `mm_smi_common`, `mm_smi_infra`, `mm_smi_gals`
+and `mm_smi_iommu` changed from the dummy-gate `?` state to hardware-enabled
+`Y` at 546 MHz. LARB0 retained throttle `0x370256`, WRR ports 2/3 `0x7`, and
+the vendor OSTD sequence. The register readback repeats each active byte as a
+16-bit field, so OSTD port 2 reads `0x2828` and port 3 reads `0x0a0a`.
+
+No vblank timeout occurred. OVL status changed from `0x6025` to `0x007fc003`,
+clearing FME underflow, RDMA0 abnormal EOF, RDMA0 SMI underflow and abnormal
+SOF. RDMA status changed from `0x77` to `0x67`, clearing FIFO underflow and
+abnormal EOF while FIFO-empty remains latched. OVL IRQ progressed from 38 to
+292.
+
+RDMA IRQ 313 remained zero despite visible output. It is therefore not usable
+as the success criterion for this test and requires a separate implementation
+investigation. This result proves basic visible scanout only; it does not prove
+continuous animation, long-running stability, bootloader-independent panel
+power, suspend/resume, Weston or the full PQ chain.
 
 ## Evidence discipline
 

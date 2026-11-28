@@ -449,5 +449,62 @@ vendor power-domain callback explicitly clears CG0 bits 11/17/27 and CG1 bit 0.
 Patch 0049 changes only those four clock descriptors to the corresponding
 `GATE_MM0`/`GATE_MM1` entries. No register value, clock ID, DTS property or
 display tuning value changes. V70 must first show `Y` for all four gates and
-then show the expected LARB values at component bind. Build and hardware
-execution are pending.
+then show the expected LARB values at component bind.
+
+## V70 build and preflight
+
+V70 passed Build Mainline run `46135235963`. The kernel changed to SHA-256
+`27813ac1cebeb85cc89ac3bf59446ce57b6830df39974e6b94a9435412b6de3e`;
+the DTB remained `f041bf87b0b7b9df72be2e00b274c184b19eb7ea4625b5f0211f7ddd2288d665`.
+The build log is free of compiler warning/error lines and explicitly compiled
+`drivers/clk/mediatek/clk-mt6873-mm.o`.
+
+The recovery image is 16,054,272 bytes with SHA-256
+`90918d3f8db33888fa3f58ddd016cf94ae2161fb3cbd1a945c2eeffec10c998c`
+and passed all 59 assembly checks. The non-writing flash preflight found the
+expected current recovery hash
+`3bcdb7329697cb200d3faae3aeeb8241b25c11cb15281338f4a0e4287c973468`.
+V70 was then written only to recovery and manually booted.
+
+## V70 hardware result
+
+All four SMI clocks reported hardware-enabled at 546 MHz:
+
+```text
+mm_smi_common  Y
+mm_smi_infra   Y
+mm_smi_gals    Y
+mm_smi_iommu   Y
+```
+
+LARB0 retained the vendor values in the delayed snapshot:
+
+```text
+0x0024 = 0x00370256
+0x0108 = 0x00000007
+0x010c = 0x00000007
+0x0200 = 0x00000202
+0x0204 = 0x00000202
+0x0208 = 0x00002828
+0x020c = 0x00000a0a
+0x0210 = 0x00000c0c
+0x0214 = 0x00002828
+```
+
+The vendor writes one byte per port (`02, 02, 28, 0a, 0c, 28`); hardware
+readback expands each active field into the repeated 16-bit form.
+
+The physical panel displayed the Linux boot text, a correctly colored Linux
+penguin and a pure-white framebuffer. The log independently recorded an
+enabled 1080x2400 DSI connector, no vblank timeout, OVL IRQ progress from 38
+to 292 and a completed white-framebuffer write.
+
+OVL status changed from the failing `0x6025` to `0x007fc003`; FME underflow,
+RDMA0 abnormal EOF, RDMA0 SMI underflow and abnormal SOF are clear. RDMA status
+changed from `0x77` to `0x67`; FIFO underflow and abnormal EOF are clear while
+FIFO-empty remains latched.
+
+RDMA IRQ 313 still read zero even though visible frames reached the panel.
+It is therefore not a valid pass/fail gate for this path and remains an open
+implementation detail. This run proves basic visible scanout, not animation,
+long-running stability, independent panel power-up or the full PQ chain.
