@@ -559,14 +559,33 @@ presentation is now hardware-validated.
 
 V74 ran the same kernel/DTB with a 600-flip stress build. Every progress
 checkpoint from 60 through 600 completed, followed by restoration of the
-original framebuffer and `DROP_MASTER=0`. The user observed the intended slow
-red/blue block changes. OVL remained `0x7fc003`, RDMA remained `0x67`, LARB and
-all SMI gates stayed enabled, OVL IRQ reached 1356, and no vblank timeout,
-OOM, WARN or display fault occurred.
+original framebuffer and `DROP_MASTER=0`. The user directly observed red, blue,
+the intended slow red/blue block changes, restoration of the original
+framebuffer and the final white frame. OVL remained `0x7fc003`, RDMA remained
+`0x67`, LARB and all SMI gates stayed enabled, OVL IRQ reached 1356, and no
+vblank timeout, OOM, WARN or display fault occurred.
 
 Sustained short-duration KMS page flipping is now hardware-validated. Remaining
 work is longer-duration/memory-pressure stress, a real compositor and
 bootloader-independent panel power.
+
+Patch 0050 adds a standard backlight device backed by the panel's original
+vendor-confirmed DCS `0x51` write, retaining the existing default brightness
+1023 and exposing the 11-bit range through `max_brightness=2047`. It does not
+enable an unverified MMSYS PWM path. Clean Linux `v6.18.59` build run
+`46148455487` passed, compiled `panel-samsung-s6e8fc01.o` with zero compiler
+warnings/errors, and produced:
+
+```text
+Image.gz sha256  b0401eaa7194e7cde27221bfd18dd9e1962b6597e96a1c5a45902d3f694b080e
+DTB sha256       f041bf87b0b7b9df72be2e00b274c184b19eb7ea4625b5f0211f7ddd2288d665
+image sha256     38acb2148371ec240f02e4cee16f8182f3c0e99f513867866011f0a100674a2c
+```
+
+The 16,064,512-byte recovery-only V75 image passed 62 static checks and was
+written only to `recovery`; candidate readback matched its SHA-256. The phone
+remained in Android and was not rebooted. Actual backlight registration and
+the `0, 64, 256, 512, 1024, 2047, 1023` brightness sequence remain pending.
 
 ## Pending
 

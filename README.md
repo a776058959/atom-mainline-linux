@@ -19,8 +19,9 @@ read-only hardware-test fixtures.
 - Display Stage A passed: MIPI TX PHY and DSI host bind, the DSI IRQ is
   registered, MMSYS DSI clocks are acquired and the DISP power domain is
   attached.
-- Display Stage B panel attachment is prepared but has not yet been validated
-  against a freshly compiled DTB.
+- Display Stage B panel attachment passed on hardware: the S6E8FC01 driver
+  bound, acquired its VIBR regulator and GPIOs, and completed
+  `mipi_dsi_attach()`.
 - Display Stage C0/C1 SMI, LARB and main IOMMU providers passed on hardware.
 - Display Stage C2a OVL/RDMA providers bind on hardware, attach to the expected
   LARBs and a shared IOMMU group, and remain behind the no-DRM-card boundary.
@@ -60,7 +61,12 @@ read-only hardware-test fixtures.
   completed real double-buffered KMS page flips to visible red and blue frames,
   received all flip-complete events and restored the original framebuffer. V74
   completed 600 additional page flips with stable registers and no display
-  errors.
+  errors; the user directly observed red, blue, slow red/blue block changes,
+  restoration of the original framebuffer and the final white frame. Patch
+  0050 now exposes the panel's vendor-confirmed 11-bit DCS brightness interface
+  as a standard backlight device. Linux `v6.18.59` build run `46148455487`
+  passed with zero compiler warnings/errors, and V75 was written only to
+  `recovery` with matching candidate readback. Hardware validation is pending.
 
 See [docs/STATUS.md](docs/STATUS.md) for completed and pending work, and
 [docs/VALIDATION-HISTORY.md](docs/VALIDATION-HISTORY.md) for evidence limits.
