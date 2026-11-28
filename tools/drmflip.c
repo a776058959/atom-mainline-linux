@@ -8,6 +8,9 @@
  *   GETRESOURCES -> GETCRTC -> CREATE_DUMB -> MAP_DUMB -> mmap
  *   -> ADDFB2 -> PAGE_FLIP -> read FLIP_COMPLETE -> restore
  *
+ * The longer stress build can also allocate, fill and release groups of
+ * full-size dumb buffers while page flips continue.
+ *
  * Build with:
  *   aarch64-linux-gnu-gcc -nostdlib -static -ffreestanding \
  *       -fno-builtin -fno-stack-protector -O2 -Wall -Wextra -Werror \
@@ -27,6 +30,7 @@ typedef long s64;
 #define SYS_write 64
 #define SYS_exit_group 94
 #define SYS_nanosleep 101
+#define SYS_clock_gettime 113
 #define SYS_mmap 222
 #define SYS_munmap 215
 
@@ -184,8 +188,31 @@ struct timespec {
 #define DRMFLIP_STRESS_FLIP_COUNT 0
 #endif
 
+#ifndef DRMFLIP_STRESS_LOG_INTERVAL
 #define DRMFLIP_STRESS_LOG_INTERVAL 60
+#endif
+
+#ifndef DRMFLIP_STRESS_FRAMES_PER_COLOR
 #define DRMFLIP_STRESS_FRAMES_PER_COLOR 120
+#endif
+
+#ifndef DRMFLIP_STRESS_CHURN_EVERY
+#define DRMFLIP_STRESS_CHURN_EVERY 0
+#endif
+
+#ifndef DRMFLIP_STRESS_CHURN_BUFFERS
+#define DRMFLIP_STRESS_CHURN_BUFFERS 0
+#endif
+
+#if DRMFLIP_STRESS_CHURN_EVERY > 0 && DRMFLIP_STRESS_CHURN_BUFFERS < 1
+#error DRMFLIP_STRESS_CHURN_EVERY requires at least one churn buffer
+#endif
+
+#if DRMFLIP_STRESS_CHURN_BUFFERS > 8
+#error DRMFLIP_STRESS_CHURN_BUFFERS cannot exceed 8
+#endif
+
+#define CLOCK_MONOTONIC 1
 
 #define fourcc_code(a, b, c, d) \
 	((u32)(a) | ((u32)(b) << 8) | ((u32)(c) << 16) | ((u32)(d) << 24))
@@ -268,6 +295,19 @@ static void sleep_seconds(long seconds)
 	ts.tv_sec = seconds;
 	ts.tv_nsec = 0;
 	sc3(SYS_nanosleep, (long)&ts, 0, 0);
+}
+
+static u64 monotonic_seconds(void)
+{
+	struct timespec ts;
+	long ret;
+
+	ts.tv_sec = 0;
+	ts.tv_nsec = 0;
+	ret = sc3(SYS_clock_gettime, CLOCK_MONOTONIC, (long)&ts, 0);
+	if (ret)
+		return 0;
+	return ts.tv_sec;
 }
 
 static u64 string_len(const char *text)
@@ -443,6 +483,78 @@ static long add_fb(long fd, struct drm_mode_create_dumb *dumb,
 	return ret;
 }
 
+static long remove_fb(long fd, u32 fb_id)
+{
+	return sys_ioctl(fd, DRM_IOCTL_MODE_RMFB, &fb_id);
+}
+
+static long destroy_dumb(long fd, u32 handle)
+{
+	struct drm_mode_destroy_dumb destroy;
+
+	destroy.handle = handle;
+	return sys_ioctl(fd, DRM_IOCTL_MODE_DESTROY_DUMB, &destroy);
+}
+
+#if DRMFLIP_STRESS_CHURN_EVERY > 0
+static long churn_buffers(long fd, u32 width, u32 height, u32 cycle)
+{
+	struct drm_mode_create_dumb dumb[DRMFLIP_STRESS_CHURN_BUFFERS];
+	void *mapping[DRMFLIP_STRESS_CHURN_BUFFERS] = { 0 };
+	u32 fb_ids[DRMFLIP_STRESS_CHURN_BUFFERS] = { 0 };
+	u32 created = 0;
+	u32 mapped = 0;
+	u32 framebuffers = 0;
+	u64 offset;
+	long ret;
+	u32 i;
+
+	for (i = 0; i < DRMFLIP_STRESS_CHURN_BUFFERS; i++) {
+		ret = create_dumb(fd, width, height, &dumb[i]);
+		if (ret) {
+			out_u64("stress churn create failed=", i);
+			goto cleanup;
+		}
+		created++;
+
+		ret = map_dumb(fd, &dumb[i], &mapping[i], &offset);
+		if (ret) {
+			out_u64("stress churn map failed=", i);
+			goto cleanup;
+		}
+		mapped++;
+
+		fill_pixels(&dumb[i], mapping[i],
+			    0x00101010U + cycle * 0x00010101U);
+		ret = add_fb(fd, &dumb[i], width, height, &fb_ids[i]);
+		if (ret) {
+			out_u64("stress churn addfb failed=", i);
+			goto cleanup;
+		}
+		framebuffers++;
+	}
+
+	out_u64("stress churn cycle=", cycle);
+	out_u64("stress churn buffers=", DRMFLIP_STRESS_CHURN_BUFFERS);
+	out_u64("stress churn bytes=",
+		(u64)dumb[0].size * DRMFLIP_STRESS_CHURN_BUFFERS);
+	ret = 0;
+
+cleanup:
+	while (framebuffers > 0)
+		remove_fb(fd, fb_ids[--framebuffers]);
+	while (mapped > 0) {
+		i = --mapped;
+		sc3(SYS_munmap, (long)mapping[i], dumb[i].size, 0);
+	}
+	while (created > 0)
+		destroy_dumb(fd, dumb[--created].handle);
+	if (ret)
+		out_ret("stress churn", ret);
+	return ret;
+}
+#endif
+
 static long flip_and_wait(long fd, u32 crtc_id, u32 fb_id, u64 user_data,
 			  int verbose)
 {
@@ -501,7 +613,6 @@ static int run(void)
 	struct drm_mode_crtc crtc;
 	struct drm_mode_create_dumb red;
 	struct drm_mode_create_dumb blue;
-	struct drm_mode_destroy_dumb destroy;
 	u32 crtc_ids[8];
 	u32 connector_ids[8];
 	u32 encoder_ids[8];
@@ -522,6 +633,8 @@ static int run(void)
 #if DRMFLIP_STRESS_FLIP_COUNT > 0
 	u32 stress_index;
 	u32 stress_fb;
+	u64 stress_started;
+	u64 stress_elapsed;
 #endif
 
 	out("===== drmflip begin =====\n");
@@ -641,6 +754,7 @@ static int run(void)
 
 #if DRMFLIP_STRESS_FLIP_COUNT > 0
 	out_u64("stress begin count=", DRMFLIP_STRESS_FLIP_COUNT);
+	stress_started = monotonic_seconds();
 	for (stress_index = 0;
 	     stress_index < DRMFLIP_STRESS_FLIP_COUNT;
 	     stress_index++) {
@@ -657,7 +771,21 @@ static int run(void)
 		if ((stress_index + 1) % DRMFLIP_STRESS_LOG_INTERVAL == 0 ||
 		    stress_index + 1 == DRMFLIP_STRESS_FLIP_COUNT)
 			out_u64("stress progress=", stress_index + 1);
+#if DRMFLIP_STRESS_CHURN_EVERY > 0
+		if ((stress_index + 1) % DRMFLIP_STRESS_CHURN_EVERY == 0) {
+			ret = churn_buffers(
+				fd, width, height,
+				(stress_index + 1) / DRMFLIP_STRESS_CHURN_EVERY);
+			if (ret) {
+				out_u64("stress churn failed at flip=",
+					stress_index + 1);
+				goto out_rm_blue;
+			}
+		}
+#endif
 	}
+	stress_elapsed = monotonic_seconds() - stress_started;
+	out_u64("stress elapsed seconds=", stress_elapsed);
 	out("stress complete\n");
 #endif
 	status = 0;
@@ -676,10 +804,10 @@ static int run(void)
 
 out_rm_blue:
 	if (current_fb)
-		sys_ioctl(fd, DRM_IOCTL_MODE_RMFB, &blue_fb);
+		remove_fb(fd, blue_fb);
 out_rm_red:
 	if (current_fb)
-		sys_ioctl(fd, DRM_IOCTL_MODE_RMFB, &red_fb);
+		remove_fb(fd, red_fb);
 out_unmap_blue:
 	if (blue_map)
 		sc3(SYS_munmap, (long)blue_map, blue.size, 0);
@@ -687,11 +815,9 @@ out_unmap_red:
 	if (red_map)
 		sc3(SYS_munmap, (long)red_map, red.size, 0);
 out_destroy_blue:
-	destroy.handle = blue.handle;
-	sys_ioctl(fd, DRM_IOCTL_MODE_DESTROY_DUMB, &destroy);
+	destroy_dumb(fd, blue.handle);
 out_destroy_red:
-	destroy.handle = red.handle;
-	sys_ioctl(fd, DRM_IOCTL_MODE_DESTROY_DUMB, &destroy);
+	destroy_dumb(fd, red.handle);
 out_drop_master:
 	out_ret("DROP_MASTER", sys_ioctl(fd, DRM_IOCTL_DROP_MASTER, 0));
 out_close:

@@ -37,11 +37,26 @@ jobs:
             -DDRMFLIP_STRESS_FLIP_COUNT=600 \
             -Wl,-e,_start -Wl,--build-id=none \
             -o out/drmflip-stress tools/drmflip.c
+          aarch64-linux-gnu-gcc \
+            -nostdlib -static -no-pie -ffreestanding \
+            -fno-builtin -fno-stack-protector \
+            -fno-unwind-tables -fno-asynchronous-unwind-tables \
+            -O2 -Wall -Wextra -Werror \
+            -DDRMFLIP_STRESS_FLIP_COUNT=12000 \
+            -DDRMFLIP_STRESS_LOG_INTERVAL=600 \
+            -DDRMFLIP_STRESS_FRAMES_PER_COLOR=1200 \
+            -DDRMFLIP_STRESS_CHURN_EVERY=1000 \
+            -DDRMFLIP_STRESS_CHURN_BUFFERS=4 \
+            -Wl,-e,_start -Wl,--build-id=none \
+            -o out/drmflip-longstress tools/drmflip.c
           file out/drmflip
           file out/drmflip-stress
+          file out/drmflip-longstress
           readelf -h out/drmflip
           readelf -l out/drmflip
-          sha256sum out/drmflip out/drmflip-stress | tee out/drmflip.sha256
+          sha256sum \
+            out/drmflip out/drmflip-stress out/drmflip-longstress |
+            tee out/drmflip.sha256
 
       - name: Upload probe
         uses: actions/upload-artifact@v4
@@ -50,4 +65,5 @@ jobs:
           path: |
             out/drmflip
             out/drmflip-stress
+            out/drmflip-longstress
             out/drmflip.sha256
