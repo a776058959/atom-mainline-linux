@@ -535,3 +535,27 @@ The direct `/dev/fb0` writes did not add KMS page-flip events, so OVL IRQ did
 not advance beyond the initial modeset. This proves repeated display-memory
 refresh, not atomic commit behavior. The next test should run a real DRM
 userspace probe followed by modetest or Weston.
+
+## V72 DRM capability probe
+
+V72 reused the V70 kernel and DTB and added the reviewed static aarch64
+`drmprobe`. Its complete output was:
+
+```text
+open /dev/dri/card0 = OK (O_RDWR)
+SET_CLIENT_CAP(ATOMIC=3,1) -> 0
+SET_CLIENT_CAP(UNIVERSAL_PLANES=2,1) -> 0
+DUMB_BUFFER=1
+ASYNC_PAGE_FLIP=0
+CURSOR=512x512
+ADDFB2_MODIFIERS=1
+CREATE_DUMB 64x64x32 -> 0 handle=1 pitch=256 size=16384
+DESTROY_DUMB -> 0
+GETRESOURCES crtcs=1 connectors=1 encoders=1 fbs=0
+max WxH=4096x4096
+```
+
+The probe exited zero and the subsequent white-frame write completed with no
+display warning or vblank timeout. This establishes the KMS client and
+dumb-buffer prerequisites. It does not perform framebuffer mapping, `ADDFB2`,
+modeset, page flip or completion-event handling.

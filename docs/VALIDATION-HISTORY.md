@@ -375,6 +375,22 @@ These writes changed the mapped fbdev memory while the active CRTC continued
 scanning. They did not create DRM atomic commits or page-flip events. A real
 KMS client is the next required functional test.
 
+## Display Stage C2b V72 DRM capability probe
+
+V72 reused the V70 kernel and DTB and added the reviewed freestanding aarch64
+`drmprobe`. The probe opened `/dev/dri/card0` read-write and returned zero for
+both atomic and universal-plane client capabilities. It allocated and destroyed
+a 64x64 XRGB8888 dumb buffer with pitch 256 and size 16,384 bytes.
+
+The device reported one CRTC, one connector, one encoder and no existing DRM
+framebuffer objects, with a maximum mode size of 4096x4096. Dumb-buffer support
+and ADDFB2 modifiers were available; asynchronous page flip was not.
+
+The probe exited zero and the following white-frame write remained stable with
+no display warning or vblank timeout. It did not map the buffer, create a
+framebuffer, perform a modeset or submit a page flip. Real KMS presentation is
+therefore still unverified.
+
 ## Evidence discipline
 
 Historical test images intentionally ended in a controlled panic so pstore

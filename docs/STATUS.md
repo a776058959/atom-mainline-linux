@@ -536,10 +536,19 @@ The direct fbdev writes did not advance the OVL IRQ beyond the value produced
 by the initial modeset, which distinguishes framebuffer-memory updates from
 DRM page-flip events. The next display gate is a real DRM userspace client.
 
+V72 added a reviewed freestanding aarch64 `drmprobe` to the same V70 kernel and
+DTB. It opened `/dev/dri/card0` read-write, enabled atomic and universal-plane
+client capabilities, allocated and destroyed a 64x64 XRGB8888 dumb buffer, and
+enumerated one CRTC, one connector and one encoder. The display registers and
+white-frame path remained stable with no warnings or vblank timeouts.
+
+The probe did not yet map a framebuffer, submit a page flip or wait for a flip
+completion event. Real DRM page-flip remains the next functional gate.
+
 ## Pending
 
 - long-running display stability;
-- DRM atomic/page-flip behavior through a real KMS userspace client;
+- DRM framebuffer add/map and page-flip completion;
 - standalone panel/backlight power-up without relying on LK pre-initialization;
 - full DRM component chain and routing;
 - MT6873 SMI traffic validation, LARB0 WRR handling and legacy IOMMU bank
