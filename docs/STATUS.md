@@ -584,8 +584,15 @@ image sha256     38acb2148371ec240f02e4cee16f8182f3c0e99f513867866011f0a100674a2
 
 The 16,064,512-byte recovery-only V75 image passed 62 static checks and was
 written only to `recovery`; candidate readback matched its SHA-256. The phone
-remained in Android and was not rebooted. Actual backlight registration and
-the `0, 64, 256, 512, 1024, 2047, 1023` brightness sequence remain pending.
+remained in Android before the user manually entered recovery.
+
+V75 then passed hardware validation. The standard backlight was registered as
+`14010000.dsi.0` with `max_brightness=2047`, and every requested level
+`0, 64, 256, 512, 1024, 2047, 1023` read back exactly. The user observed normal
+brightness behavior. DSI IRQ advanced from 33 to 47 while SMI gates, MIPI TX
+PLL, VIBR regulator, OVL/RDMA and LARB state remained valid. No brightness
+transfer failure, vblank timeout or display fault occurred. The phone returned
+to Android after the controlled panic.
 
 ## Pending
 

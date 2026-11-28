@@ -66,7 +66,10 @@ read-only hardware-test fixtures.
   0050 now exposes the panel's vendor-confirmed 11-bit DCS brightness interface
   as a standard backlight device. Linux `v6.18.59` build run `46148455487`
   passed with zero compiler warnings/errors, and V75 was written only to
-  `recovery` with matching candidate readback. Hardware validation is pending.
+  `recovery` with matching candidate readback. V75 hardware validation passed:
+  the `14010000.dsi.0` backlight exposed `0..2047`, all seven requested levels
+  read back exactly, the user observed normal brightness behavior, and the
+  display chain remained active without vblank timeout or display fault.
 
 See [docs/STATUS.md](docs/STATUS.md) for completed and pending work, and
 [docs/VALIDATION-HISTORY.md](docs/VALIDATION-HISTORY.md) for evidence limits.
