@@ -11,10 +11,10 @@ diff --git a/drivers/gpu/drm/mediatek/mtk_disp_ovl.c b/drivers/gpu/drm/mediatek/
 +#define OVL_READ_WRK				BIT(20)
 +#define OVL_BYPASS_SHADOW			BIT(22)
  #define DISP_REG_OVL_RST			0x0014
-@@ -267,7 +271,13 @@ void mtk_ovl_start(struct device *dev)
- 		reg = readl(ovl->regs + DISP_REG_OVL_DATAPATH_CON);
- 		reg = reg | OVL_LAYER_SMI_ID_EN;
- 		writel_relaxed(reg, ovl->regs + DISP_REG_OVL_DATAPATH_CON);
+@@ -282,7 +286,13 @@ void mtk_ovl_start(struct device *dev)
+ 		reg = readl(ovl->regs + DISP_REG_OVL_SRC_CON);
+ 		reg |= OVL_FORCE_RELAY_MODE;
+ 		writel_relaxed(reg, ovl->regs + DISP_REG_OVL_SRC_CON);
  	}
 -	writel_relaxed(0x1, ovl->regs + DISP_REG_OVL_EN);
 +	if (ovl->data->mt6873_quirks)
