@@ -62,22 +62,22 @@ new file mode 100644
 +
 +	node = of_find_compatible_node(NULL, NULL, compatible);
 +	if (!node) {
-+		pr_info("ATOM-DIAG-V67: %s=missing\n", name);
++		pr_info("ATOM-DIAG-V68: %s=missing\n", name);
 +		return;
 +	}
 +
 +	base = of_iomap(node, 0);
 +	of_node_put(node);
 +	if (!base) {
-+		pr_info("ATOM-DIAG-V67: %s=map-failed\n", name);
++		pr_info("ATOM-DIAG-V68: %s=map-failed\n", name);
 +		return;
 +	}
 +
-+	pr_info("ATOM-DIAG-V67: %s=begin\n", name);
++	pr_info("ATOM-DIAG-V68: %s=begin\n", name);
 +	for (i = 0; i < count; i++)
-+		pr_info("ATOM-DIAG-V67: %s[%#06x]=%#010x\n", name,
++		pr_info("ATOM-DIAG-V68: %s[%#06x]=%#010x\n", name,
 +			offsets[i], readl(base + offsets[i]));
-+	pr_info("ATOM-DIAG-V67: %s=end\n", name);
++	pr_info("ATOM-DIAG-V68: %s=end\n", name);
 +
 +	iounmap(base);
 +}
@@ -109,7 +109,7 @@ new file mode 100644
 +	if (!of_machine_is_compatible("mediatek,mt6873"))
 +		return 0;
 +
-+	pr_info("ATOM-DIAG-V67: scheduling register snapshot in %d ms\n",
++	pr_info("ATOM-DIAG-V68: scheduling register snapshot in %d ms\n",
 +		MT6873_DIAG_DELAY_MS);
 +	schedule_delayed_work(&mtk_mt6873_diag_work,
 +			      msecs_to_jiffies(MT6873_DIAG_DELAY_MS));

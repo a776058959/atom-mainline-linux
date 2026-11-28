@@ -1,0 +1,52 @@
+diff --git a/drivers/gpu/drm/mediatek/mtk_mt6873_diag.c b/drivers/gpu/drm/mediatek/mtk_mt6873_diag.c
+--- a/drivers/gpu/drm/mediatek/mtk_mt6873_diag.c
++++ b/drivers/gpu/drm/mediatek/mtk_mt6873_diag.c
+@@ -21,7 +21,9 @@
+ };
+ 
+ static const u32 mt6873_ovl_offsets[] = {
+-	0x04, 0x08, 0x0c, 0x24, 0x2c, 0x30, 0x38, 0x44, 0xc0, 0xf40,
++	0x00, 0x04, 0x08, 0x0c, 0x24, 0x2c, 0x30, 0x38, 0x44,
++	0xc0, 0xc8, 0xd0, 0x1e0, 0x1f8, 0x1fc, 0x20c, 0x210,
++	0x220, 0x240, 0xf40,
+ };
+ 
+ static const u32 mt6873_rdma_offsets[] = {
+@@ -35,7 +37,21 @@ static const u32 mt6873_dsi_offsets[] = {
+ static const u32 mt6873_mutex_offsets[] = {
+ 	0x20, 0x24, 0x2c, 0x30, 0x34,
+ };
+ 
++static const u32 mt6873_smi_common_offsets[] = {
++	0x100, 0x200, 0x204, 0x208, 0x20c, 0x210, 0x214,
++	0x218, 0x21c, 0x220,
++};
++
++static const u32 mt6873_larb0_offsets[] = {
++	0x24, 0x40, 0x100, 0x104, 0x108, 0x10c, 0x110, 0x114,
++	0x200, 0x204, 0x208, 0x20c, 0x210, 0x214, 0x388, 0x38c,
++};
++
++static const u32 mt6873_iommu_offsets[] = {
++	0x000, 0x02c, 0x110, 0x118, 0x120, 0x124, 0x134, 0x13c,
++};
++
+ static void mtk_mt6873_diag_dump_block(const char *compatible,
+ 				       const char *name,
+ 				       const u32 *offsets, size_t count)
+@@ -72,6 +88,15 @@ static void mtk_mt6873_diag_workfn(struct work_struct *work)
+ 	mtk_mt6873_diag_dump_block("mediatek,mt6873-mmsys", "mmsys",
+ 				   mt6873_mmsys_offsets,
+ 				   ARRAY_SIZE(mt6873_mmsys_offsets));
++	mtk_mt6873_diag_dump_block("mediatek,mt6873-smi-common",
++				   "smi-common", mt6873_smi_common_offsets,
++				   ARRAY_SIZE(mt6873_smi_common_offsets));
++	mtk_mt6873_diag_dump_block("mediatek,mt6873-smi-larb", "larb0",
++				   mt6873_larb0_offsets,
++				   ARRAY_SIZE(mt6873_larb0_offsets));
++	mtk_mt6873_diag_dump_block("mediatek,mt6873-m4u", "iommu",
++				   mt6873_iommu_offsets,
++				   ARRAY_SIZE(mt6873_iommu_offsets));
+ 	mtk_mt6873_diag_dump_block("mediatek,mt6873-disp-ovl", "ovl0",
+ 				   mt6873_ovl_offsets,
+ 				   ARRAY_SIZE(mt6873_ovl_offsets));

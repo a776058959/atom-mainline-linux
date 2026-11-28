@@ -1,0 +1,30 @@
+diff --git a/drivers/gpu/drm/mediatek/mtk_disp_rdma.c b/drivers/gpu/drm/mediatek/mtk_disp_rdma.c
+--- a/drivers/gpu/drm/mediatek/mtk_disp_rdma.c
++++ b/drivers/gpu/drm/mediatek/mtk_disp_rdma.c
+@@ -71,5 +71,6 @@ static const u32 mt8173_formats[] = {
+ struct mtk_disp_rdma_data {
+ 	unsigned int fifo_size;
++	bool mt6873_quirks;
+ 	const u32 *formats;
+ 	size_t num_formats;
+ };
+@@ -206,7 +207,10 @@ void mtk_rdma_config(struct device *dev, unsigned int width,
+ 	 * output threshold to 70% of max fifo size to make sure the
+ 	 * threhold will not overflow
+ 	 */
+-	threshold = rdma_fifo_size * 7 / 10;
++	if (rdma->data->mt6873_quirks)
++		threshold = 0;
++	else
++		threshold = rdma_fifo_size * 7 / 10;
+ 	reg = RDMA_FIFO_UNDERFLOW_EN |
+ 	      RDMA_FIFO_PSEUDO_SIZE(rdma_fifo_size) |
+ 	      RDMA_OUTPUT_VALID_FIFO_THRESHOLD(threshold);
+@@ -394,6 +398,7 @@ static const struct mtk_disp_rdma_data mt8183_rdma_driver_data = {
+ 
+ static const struct mtk_disp_rdma_data mt6873_rdma_driver_data = {
+ 	.fifo_size = SZ_1K * 3 + SZ_32K,
++	.mt6873_quirks = true,
+ 	.formats = mt8173_formats,
+ 	.num_formats = ARRAY_SIZE(mt8173_formats),
+ };

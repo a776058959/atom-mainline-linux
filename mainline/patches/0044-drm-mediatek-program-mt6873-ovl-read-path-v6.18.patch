@@ -1,0 +1,70 @@
+diff --git a/drivers/gpu/drm/mediatek/mtk_disp_ovl.c b/drivers/gpu/drm/mediatek/mtk_disp_ovl.c
+--- a/drivers/gpu/drm/mediatek/mtk_disp_ovl.c
++++ b/drivers/gpu/drm/mediatek/mtk_disp_ovl.c
+@@ -41,6 +41,15 @@
+ #define OVL_CONST_BLEND					BIT(28)
+ #define DISP_REG_OVL_RDMA_CTRL(n)		(0x00c0 + 0x20 * (n))
+ #define DISP_REG_OVL_RDMA_GMC(n)		(0x00c8 + 0x20 * (n))
++#define DISP_REG_OVL_RDMA_FIFO(n)		(0x00d0 + 0x20 * (n))
++#define DISP_REG_OVL_RDMA_GMC_S2(n)		(0x01e0 + 0x04 * (n))
++#define DISP_REG_OVL_RDMA_GREQ_NUM		0x01f8
++#define DISP_REG_OVL_RDMA_GREQ_URG_NUM		0x01fc
++#define DISP_REG_OVL_RDMA_ULTRA_SRC		0x020c
++#define DISP_REG_OVL_RDMA_BUF_LOW(n)		(0x0210 + 0x04 * (n))
++#define DISP_REG_OVL_RDMA_BUF_HIGH(n)		(0x0220 + 0x04 * (n))
++#define DISP_REG_OVL_FUNC_DCM0			0x02a0
++#define DISP_REG_OVL_FUNC_DCM1			0x02a4
+ #define DISP_REG_OVL_ADDR_MT2701		0x0040
+ #define DISP_REG_OVL_CLRFMT_EXT			0x02d0
+ #define OVL_CON_CLRFMT_BIT_DEPTH_MASK(n)		(GENMASK(1, 0) << (4 * (n)))
+@@ -254,6 +263,32 @@ void mtk_ovl_clk_disable(struct device *dev)
+ 	clk_disable_unprepare(ovl->clk);
+ }
+ 
++static void mtk_ovl_mt6873_config_rt(struct mtk_disp_ovl *ovl)
++{
++	u32 greq_num = 0xf1ff0000;
++	u32 urg_num = 0;
++	unsigned int i;
++
++	for (i = 0; i < ovl->data->layer_nr; i++) {
++		greq_num |= 0x7 << (4 * i);
++		urg_num |= 0x7 << (4 * i);
++
++		writel_relaxed(0x03ff03ff, ovl->regs + DISP_REG_OVL_RDMA_GMC(i));
++		writel_relaxed(0x01800000, ovl->regs + DISP_REG_OVL_RDMA_FIFO(i));
++		writel_relaxed(0x207f00ff, ovl->regs + DISP_REG_OVL_RDMA_GMC_S2(i));
++		writel_relaxed(0, ovl->regs + DISP_REG_OVL_RDMA_BUF_LOW(i));
++		writel_relaxed(BIT(31),
++			       ovl->regs + DISP_REG_OVL_RDMA_BUF_HIGH(i));
++	}
++
++	writel_relaxed(greq_num, ovl->regs + DISP_REG_OVL_RDMA_GREQ_NUM);
++	writel_relaxed(urg_num, ovl->regs + DISP_REG_OVL_RDMA_GREQ_URG_NUM);
++	writel_relaxed(0x00008040,
++		       ovl->regs + DISP_REG_OVL_RDMA_ULTRA_SRC);
++	writel_relaxed(0, ovl->regs + DISP_REG_OVL_FUNC_DCM0);
++	writel_relaxed(0, ovl->regs + DISP_REG_OVL_FUNC_DCM1);
++}
++
+ void mtk_ovl_start(struct device *dev)
+ {
+ 	struct mtk_disp_ovl *ovl = dev_get_drvdata(dev);
+@@ -282,4 +317,6 @@ void mtk_ovl_start(struct device *dev)
+ 		reg = readl(ovl->regs + DISP_REG_OVL_SRC_CON);
+ 		reg |= OVL_FORCE_RELAY_MODE;
+ 		writel_relaxed(reg, ovl->regs + DISP_REG_OVL_SRC_CON);
++
++		mtk_ovl_mt6873_config_rt(ovl);
+ 	}
+@@ -384,8 +421,10 @@ void mtk_ovl_layer_on(struct device *dev, unsigned int idx,
+ 	if (ovl->data->gmc_bits == 10)
+ 		gmc_value = gmc_thrshd_h | gmc_thrshd_h << 16;
+ 	else
+ 		gmc_value = gmc_thrshd_l | gmc_thrshd_l << 8 |
+ 			    gmc_thrshd_h << 16 | gmc_thrshd_h << 24;
++	if (ovl->data->mt6873_quirks)
++		gmc_value = 0x03ff03ff;
+ 	mtk_ddp_write(cmdq_pkt, gmc_value,
+ 		      &ovl->cmdq_reg, ovl->regs, DISP_REG_OVL_RDMA_GMC(idx));
+ 	mtk_ddp_write_mask(cmdq_pkt, BIT(idx), &ovl->cmdq_reg, ovl->regs,

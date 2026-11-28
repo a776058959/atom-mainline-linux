@@ -1,0 +1,46 @@
+diff --git a/drivers/memory/mtk-smi.c b/drivers/memory/mtk-smi.c
+--- a/drivers/memory/mtk-smi.c
++++ b/drivers/memory/mtk-smi.c
+@@ -48,6 +48,9 @@
+ #define SMI_LARB_SW_FLAG		0x40
+ #define SMI_LARB_SW_FLAG_1		0x1
+ 
++#define SMI_LARB_WRR_PORT		0x100
++#define SMI_LARB_WRR(id)			(SMI_LARB_WRR_PORT + ((id) << 2))
++
+ #define SMI_LARB_OSTDL_PORT		0x200
+ #define SMI_LARB_OSTDL_PORTx(id)	(SMI_LARB_OSTDL_PORT + (((id) & 0x1f) << 2))
+ 
+@@ -92,6 +95,7 @@
+ #define MTK_SMI_FLAG_SW_FLAG		BIT(1)
+ #define MTK_SMI_FLAG_SLEEP_CTL		BIT(2)
+ #define MTK_SMI_FLAG_CFG_PORT_SEC_CTL	BIT(3)
++#define MTK_SMI_FLAG_MT6873_RT_TUNING	BIT(4)
+ #define MTK_SMI_CAPS(flags, _x)		(!!((flags) & (_x)))
+ 
+ struct mtk_smi_reg_pair {
+@@ -250,7 +254,14 @@ static int mtk_smi_larb_config_port_gen2_general(struct device *dev)
+ 	if (BIT(larb->larbid) & larb->larb_gen->larb_direct_to_common_mask)
+ 		return 0;
+ 
+-	if (MTK_SMI_CAPS(flags_general, MTK_SMI_FLAG_THRT_UPDATE)) {
++	if (MTK_SMI_CAPS(flags_general, MTK_SMI_FLAG_MT6873_RT_TUNING)) {
++		writel_relaxed(0x370256,
++			       larb->base + SMI_LARB_CMD_THRT_CON);
++		if (larb->larbid == 0) {
++			writel_relaxed(0x7, larb->base + SMI_LARB_WRR(2));
++			writel_relaxed(0x7, larb->base + SMI_LARB_WRR(3));
++		}
++	} else if (MTK_SMI_CAPS(flags_general, MTK_SMI_FLAG_THRT_UPDATE)) {
+ 		reg = readl_relaxed(larb->base + SMI_LARB_CMD_THRT_CON);
+ 		reg &= ~SMI_LARB_THRT_RD_NU_LMT_MSK;
+ 		reg |= SMI_LARB_THRT_RD_NU_LMT;
+@@ -543,6 +554,6 @@ static const struct mtk_smi_larb_gen mtk_smi_larb_mt6873 = {
+ static const struct mtk_smi_larb_gen mtk_smi_larb_mt6873 = {
+ 	.config_port                = mtk_smi_larb_config_port_gen2_general,
+-	.flags_general	            = MTK_SMI_FLAG_THRT_UPDATE |
+-				      MTK_SMI_FLAG_SW_FLAG,
++	.flags_general		    = MTK_SMI_FLAG_MT6873_RT_TUNING |
++				      MTK_SMI_FLAG_SW_FLAG,
+ 	.ostd			    = mtk_smi_larb_mt6873_ostd,
+ };
