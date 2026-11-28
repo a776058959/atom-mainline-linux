@@ -504,7 +504,9 @@ RDMA0 abnormal EOF, RDMA0 SMI underflow and abnormal SOF are clear. RDMA status
 changed from `0x77` to `0x67`; FIFO underflow and abnormal EOF are clear while
 FIFO-empty remains latched.
 
-RDMA IRQ 313 still read zero even though visible frames reached the panel.
-It is therefore not a valid pass/fail gate for this path and remains an open
-implementation detail. This run proves basic visible scanout, not animation,
-long-running stability, independent panel power-up or the full PQ chain.
+RDMA IRQ 313 read zero because `mtk_crtc_enable_vblank()` enables vblank only
+on component zero. In this path that is OVL0, whose IRQ advanced from 38 to
+292; RDMA0's frame-end interrupt was never enabled. This is current upstream
+behavior, not a scanout failure. The run proves basic visible scanout, not
+animation, long-running stability, independent panel power-up or the full PQ
+chain.

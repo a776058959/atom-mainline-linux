@@ -517,8 +517,9 @@ The previous vblank timeouts disappeared. OVL status changed from `0x6025` to
 `0x007fc003`, clearing FME underflow, RDMA0 abnormal EOF, RDMA0 SMI underflow
 and abnormal SOF. RDMA status changed from `0x77` to `0x67`, clearing FIFO
 underflow and abnormal EOF while leaving FIFO-empty latched. RDMA IRQ 313
-still read zero despite visible scanout and is now tracked as a non-blocking
-implementation anomaly.
+read zero because `mtk_crtc_enable_vblank()` enables only component zero,
+which is OVL0 on this path. OVL0 IRQ advanced from 38 to 292 and no vblank wait
+timed out, matching the upstream implementation.
 
 This establishes basic visible output for the direct `OVL0 -> RDMA0 -> DSI0`
 path. Animation, long-running stability, standalone panel power-up, userspace
@@ -528,7 +529,6 @@ Weston and the full PQ chain remain unverified.
 
 - continuous frame update, animation and long-running display stability;
 - standalone panel/backlight power-up without relying on LK pre-initialization;
-- explanation of the zero RDMA IRQ count despite working visible scanout;
 - full DRM component chain and routing;
 - MT6873 SMI traffic validation, LARB0 WRR handling and legacy IOMMU bank
   fault-reporting;

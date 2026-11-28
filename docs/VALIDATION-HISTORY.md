@@ -352,11 +352,12 @@ SOF. RDMA status changed from `0x77` to `0x67`, clearing FIFO underflow and
 abnormal EOF while FIFO-empty remains latched. OVL IRQ progressed from 38 to
 292.
 
-RDMA IRQ 313 remained zero despite visible output. It is therefore not usable
-as the success criterion for this test and requires a separate implementation
-investigation. This result proves basic visible scanout only; it does not prove
-continuous animation, long-running stability, bootloader-independent panel
-power, suspend/resume, Weston or the full PQ chain.
+RDMA IRQ 313 remained zero because `mtk_crtc_enable_vblank()` enables vblank
+only on component zero. That component is OVL0 here, and its IRQ advanced from
+38 to 292; RDMA0's frame-end interrupt was never enabled. This matches the
+upstream implementation. The result proves basic visible scanout only; it does
+not prove continuous animation, long-running stability, bootloader-independent
+panel power, suspend/resume, Weston or the full PQ chain.
 
 ## Evidence discipline
 
