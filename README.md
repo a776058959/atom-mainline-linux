@@ -52,7 +52,9 @@ read-only hardware-test fixtures.
   domain clearing the corresponding MMSYS gates. Patch 0049 converts those
   four clocks to real gates. V70 then produced visible Linux console output,
   a correctly colored Linux penguin and a pure-white framebuffer on hardware.
-  The vblank timeouts and primary OVL/RDMA underflow flags disappeared.
+  The vblank timeouts and primary OVL/RDMA underflow flags disappeared. V71
+  kept the same kernel and completed six visible white/gray framebuffer
+  updates without corrupt colors, hangs or renewed underflow.
 
 See [docs/STATUS.md](docs/STATUS.md) for completed and pending work, and
 [docs/VALIDATION-HISTORY.md](docs/VALIDATION-HISTORY.md) for evidence limits.

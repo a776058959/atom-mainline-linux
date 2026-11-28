@@ -525,9 +525,21 @@ This establishes basic visible output for the direct `OVL0 -> RDMA0 -> DSI0`
 path. Animation, long-running stability, standalone panel power-up, userspace
 Weston and the full PQ chain remain unverified.
 
+V71 reused the exact V70 kernel/DTB and changed only the initramfs. It wrote an
+initial white frame and then six timed white/gray updates. The user directly
+observed the correct two-second cadence without freeze, corruption or wrong
+color. All six writes and the delayed snapshot completed. LARB0, OVL
+`0x007fc003`, RDMA `0x67` and all four enabled SMI gates remained stable, with
+no vblank timeout or display fault.
+
+The direct fbdev writes did not advance the OVL IRQ beyond the value produced
+by the initial modeset, which distinguishes framebuffer-memory updates from
+DRM page-flip events. The next display gate is a real DRM userspace client.
+
 ## Pending
 
-- continuous frame update, animation and long-running display stability;
+- long-running display stability;
+- DRM atomic/page-flip behavior through a real KMS userspace client;
 - standalone panel/backlight power-up without relying on LK pre-initialization;
 - full DRM component chain and routing;
 - MT6873 SMI traffic validation, LARB0 WRR handling and legacy IOMMU bank

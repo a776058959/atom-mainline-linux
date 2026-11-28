@@ -510,3 +510,28 @@ on component zero. In this path that is OVL0, whose IRQ advanced from 38 to
 behavior, not a scanout failure. The run proves basic visible scanout, not
 animation, long-running stability, independent panel power-up or the full PQ
 chain.
+
+## V71 dynamic framebuffer
+
+V71 reused the V70 kernel and DTB and changed only the initramfs. It wrote an
+initial white framebuffer followed by six timed white/gray updates:
+
+```text
+dynamic_frame=1 pattern=gray
+dynamic_frame=2 pattern=white
+dynamic_frame=3 pattern=gray
+dynamic_frame=4 pattern=white
+dynamic_frame=5 pattern=gray
+dynamic_frame=6 pattern=white
+dynamic_test=frames_completed count=6
+```
+
+The physical panel showed the intended approximately two-second cadence with
+no freeze, corruption, wrong color or reboot. The delayed snapshot retained
+LARB0 configuration, OVL `0x7fc003`, RDMA `0x67` and all four SMI gates; it
+reported no vblank timeout or display fault.
+
+The direct `/dev/fb0` writes did not add KMS page-flip events, so OVL IRQ did
+not advance beyond the initial modeset. This proves repeated display-memory
+refresh, not atomic commit behavior. The next test should run a real DRM
+userspace probe followed by modetest or Weston.

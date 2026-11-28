@@ -359,6 +359,22 @@ upstream implementation. The result proves basic visible scanout only; it does
 not prove continuous animation, long-running stability, bootloader-independent
 panel power, suspend/resume, Weston or the full PQ chain.
 
+## Display Stage C2b V71 dynamic framebuffer
+
+V71 reused the exact V70 kernel and DTB. Only the initramfs changed. The panel
+showed an initial white frame and then six white/gray updates at approximately
+two-second intervals. The user directly observed the correct sequence without
+freeze, corruption, wrong color or unexpected reboot.
+
+The log recorded all six `dynamic_frame` entries followed by
+`dynamic_test=frames_completed count=6`. The delayed snapshot retained the
+enabled SMI gates, LARB0 throttle/WRR/OSTD values, OVL `0x7fc003` and RDMA
+`0x67`; no vblank timeout or display fault was present.
+
+These writes changed the mapped fbdev memory while the active CRTC continued
+scanning. They did not create DRM atomic commits or page-flip events. A real
+KMS client is the next required functional test.
+
 ## Evidence discipline
 
 Historical test images intentionally ended in a controlled panic so pstore
