@@ -288,3 +288,23 @@ image sha256        20f1790c090965691330c3913327d3273b31c030c01b2fe24257e958b192
 All 59 assembly checks and the flash dry-run passed. The image was written to
 recovery and read back byte-for-byte. `boot`, `misc` and `dtbo` retained their
 original hashes. The device was not rebooted.
+
+## V65 hardware result
+
+V65 reproduced the same failure. RDMA IRQ remained zero, vblank timed out
+three times and no white frame appeared. DSI0 mutex bit 12, the 35840-byte
+RDMA FIFO and MT6873 OVL start settings did not independently unblock output.
+
+## V66 register diagnostics
+
+V66 keeps the exact V65 kernel and DTB and changes only the initramfs. It
+captures:
+
+- DSI and display interrupt state;
+- DRM debugfs summary and atomic state;
+- MMSYS route registers;
+- OVL0, RDMA0, DSI and mutex0 registers;
+- read-only `/dev/mem` MMIO values when available.
+
+V66 passed all 59 assembly checks and the flash dry-run. Hardware diagnostics
+have not yet run.

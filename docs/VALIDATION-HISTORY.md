@@ -188,6 +188,18 @@ the RDMA FIFO is 35840 bytes rather than MT8192's 5120 bytes, and OVL start
 programs `GCLAST_EN`, `OUTPUT_CLAMP` and force-relay mode. Patches 0040/0041
 will be tested next in V65.
 
+## Display Stage C2b V65
+
+V65 included the DSI0 mutex bit, MT6873 RDMA FIFO data and MT6873 OVL start
+settings. It booted and produced the same DRM/framebuffer/connector state as
+V63/V64. The white framebuffer write completed, but RDMA0 IRQ remained zero,
+vblank timed out three times and no image appeared.
+
+Those three changes are not independently sufficient. V66 is a
+diagnostic-only initramfs using the exact V65 kernel/DTB. It adds DSI/display
+IRQ evidence, DRM debugfs state, display-controller register dumps and optional
+read-only `/dev/mem` MMIO values.
+
 ## Evidence discipline
 
 Historical test images intentionally ended in a controlled panic so pstore

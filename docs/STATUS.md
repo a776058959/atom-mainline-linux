@@ -346,9 +346,19 @@ image sha256        20f1790c090965691330c3913327d3273b31c030c01b2fe24257e958b192
 The image passed all 59 assembly checks and was written to recovery with a
 full readback and protected-partition hash check. The device was not rebooted.
 
+V65 hardware validation reproduced the V63/V64 failure exactly: DRM and
+framebuffer state were valid, the white write completed, RDMA IRQ remained
+zero and vblank timed out three times. DSI0 mutex bit 12, 35840-byte RDMA FIFO
+and MT6873 OVL start settings are therefore not independently sufficient.
+
+A diagnostic-only V66 image now reuses the exact V65 kernel/DTB and expands
+the initramfs to capture DSI interrupt state, DRM debugfs state, MMSYS route
+registers, OVL/RDMA/DSI/mutex registers and read-only `/dev/mem` MMIO values.
+V66 passed all 59 assembly checks and the flash dry-run.
+
 ## Pending
 
-- V65 recovery-only hardware validation;
+- V66 register-state hardware diagnostics;
 - Stage C2b first-frame completion and visible-output validation;
 - full DRM component chain and routing;
 - MT6873 SMI traffic validation, LARB0 WRR handling and legacy IOMMU bank
