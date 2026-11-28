@@ -54,6 +54,8 @@ read-only hardware-test fixtures.
 
 See [docs/STATUS.md](docs/STATUS.md) for completed and pending work, and
 [docs/VALIDATION-HISTORY.md](docs/VALIDATION-HISTORY.md) for evidence limits.
+The previously working downstream Arch/display path is documented in
+[docs/VENDOR-ARCH-DISPLAY-ROUTE.md](docs/VENDOR-ARCH-DISPLAY-ROUTE.md).
 
 ## Repository contents
 
