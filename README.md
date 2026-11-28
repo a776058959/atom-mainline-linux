@@ -33,7 +33,11 @@ read-only hardware-test fixtures.
   same failure. Patches 0040/0041 now add vendor-backed MT6873 OVL start
   settings and the correct 35840-byte RDMA FIFO. V65 passed CI and static
   checks, but hardware validation reproduced the same vblank/RDMA failure.
-  A diagnostic-only V66 register-dump image is prepared for the next test.
+  V66 completed in hardware: the panel initialization DCS traffic raised the
+  DSI IRQ count to 31, while RDMA IRQ remained zero, and the framebuffer write
+  still timed out waiting for vblank. The `/dev/mem` MMIO reads were blocked by
+  strict devmem, so patches 0042/0043 now set the vendor-confirmed MT6873 OVL
+  clock bits and add a read-only kernel-side register snapshot for V67.
 
 See [docs/STATUS.md](docs/STATUS.md) for completed and pending work, and
 [docs/VALIDATION-HISTORY.md](docs/VALIDATION-HISTORY.md) for evidence limits.

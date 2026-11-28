@@ -1,0 +1,120 @@
+diff --git a/drivers/gpu/drm/mediatek/Makefile b/drivers/gpu/drm/mediatek/Makefile
+--- a/drivers/gpu/drm/mediatek/Makefile
++++ b/drivers/gpu/drm/mediatek/Makefile
+@@ -14,6 +14,7 @@ mediatek-drm-y := mtk_crtc.o \
+ 		  mtk_ethdr.o \
+ 		  mtk_gem.o \
+ 		  mtk_mdp_rdma.o \
++		  mtk_mt6873_diag.o \
+ 		  mtk_padding.o \
+ 		  mtk_plane.o
+ 
+diff --git a/drivers/gpu/drm/mediatek/mtk_mt6873_diag.c b/drivers/gpu/drm/mediatek/mtk_mt6873_diag.c
+new file mode 100644
+--- /dev/null
++++ b/drivers/gpu/drm/mediatek/mtk_mt6873_diag.c
+@@ -0,0 +1,104 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * Temporary MT6873 display register diagnostics for atom bring-up.
++ */
++
++#include <linux/io.h>
++#include <linux/jiffies.h>
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/of.h>
++#include <linux/of_address.h>
++#include <linux/workqueue.h>
++
++#ifndef MODULE
++
++#define MT6873_DIAG_DELAY_MS	10000
++
++static const u32 mt6873_mmsys_offsets[] = {
++	0xf04, 0xf18, 0xf1c, 0xf2c, 0xf30, 0xf40,
++};
++
++static const u32 mt6873_ovl_offsets[] = {
++	0x04, 0x08, 0x0c, 0x24, 0x2c, 0x30, 0x38, 0x44, 0xc0, 0xf40,
++};
++
++static const u32 mt6873_rdma_offsets[] = {
++	0x00, 0x04, 0x10, 0x14, 0x18, 0x24, 0x2c, 0x40, 0xf00,
++};
++
++static const u32 mt6873_dsi_offsets[] = {
++	0x00, 0x08, 0x0c, 0x14, 0x18, 0x1c, 0x20, 0x24,
++	0x28, 0x2c, 0x38, 0x50, 0x54, 0x58, 0x190,
++};
++
++static const u32 mt6873_mutex_offsets[] = {
++	0x20, 0x24, 0x2c, 0x30, 0x34,
++};
++
++static void mtk_mt6873_diag_dump_block(const char *compatible,
++				       const char *name,
++				       const u32 *offsets, size_t count)
++{
++	struct device_node *node;
++	void __iomem *base;
++	size_t i;
++
++	node = of_find_compatible_node(NULL, NULL, compatible);
++	if (!node) {
++		pr_info("ATOM-DIAG-V67: %s=missing\n", name);
++		return;
++	}
++
++	base = of_iomap(node, 0);
++	of_node_put(node);
++	if (!base) {
++		pr_info("ATOM-DIAG-V67: %s=map-failed\n", name);
++		return;
++	}
++
++	pr_info("ATOM-DIAG-V67: %s=begin\n", name);
++	for (i = 0; i < count; i++)
++		pr_info("ATOM-DIAG-V67: %s[%#06x]=%#010x\n", name,
++			offsets[i], readl(base + offsets[i]));
++	pr_info("ATOM-DIAG-V67: %s=end\n", name);
++
++	iounmap(base);
++}
++
++static void mtk_mt6873_diag_workfn(struct work_struct *work)
++{
++	mtk_mt6873_diag_dump_block("mediatek,mt6873-mmsys", "mmsys",
++				   mt6873_mmsys_offsets,
++				   ARRAY_SIZE(mt6873_mmsys_offsets));
++	mtk_mt6873_diag_dump_block("mediatek,mt6873-disp-ovl", "ovl0",
++				   mt6873_ovl_offsets,
++				   ARRAY_SIZE(mt6873_ovl_offsets));
++	mtk_mt6873_diag_dump_block("mediatek,mt6873-disp-rdma", "rdma0",
++				   mt6873_rdma_offsets,
++				   ARRAY_SIZE(mt6873_rdma_offsets));
++	mtk_mt6873_diag_dump_block("mediatek,mt6873-dsi", "dsi0",
++				   mt6873_dsi_offsets,
++				   ARRAY_SIZE(mt6873_dsi_offsets));
++	mtk_mt6873_diag_dump_block("mediatek,mt6873-disp-mutex", "mutex0",
++				   mt6873_mutex_offsets,
++				   ARRAY_SIZE(mt6873_mutex_offsets));
++}
++
++static DECLARE_DELAYED_WORK(mtk_mt6873_diag_work,
++			    mtk_mt6873_diag_workfn);
++
++static int __init mtk_mt6873_diag_init(void)
++{
++	if (!of_machine_is_compatible("mediatek,mt6873"))
++		return 0;
++
++	pr_info("ATOM-DIAG-V67: scheduling register snapshot in %d ms\n",
++		MT6873_DIAG_DELAY_MS);
++	schedule_delayed_work(&mtk_mt6873_diag_work,
++			      msecs_to_jiffies(MT6873_DIAG_DELAY_MS));
++	return 0;
++}
++late_initcall(mtk_mt6873_diag_init);
++
++#endif

@@ -351,14 +351,29 @@ framebuffer state were valid, the white write completed, RDMA IRQ remained
 zero and vblank timed out three times. DSI0 mutex bit 12, 35840-byte RDMA FIFO
 and MT6873 OVL start settings are therefore not independently sufficient.
 
-A diagnostic-only V66 image now reuses the exact V65 kernel/DTB and expands
-the initramfs to capture DSI interrupt state, DRM debugfs state, MMSYS route
-registers, OVL/RDMA/DSI/mutex registers and read-only `/dev/mem` MMIO values.
-V66 passed all 59 assembly checks and the flash dry-run.
+A diagnostic-only V66 image reused the exact V65 kernel/DTB and expanded the
+initramfs to capture DSI interrupt state, DRM debugfs state and read-only MMIO
+values. V66 passed all 59 assembly checks, was written to recovery, and ran on
+hardware. Its marker, early/settled/post-framebuffer snapshots and controlled
+`sysrq` panic were all present.
+
+V66 directly proved that the DSI controller handled panel initialization:
+IRQ 309 was `31`, while OVL IRQ 311 was `1`, OVL-2L IRQ 312 was `0`, RDMA IRQ
+313 was `0`, and `vblank wait timed out` appeared three times. The DRM plane
+and CRTC state showed the expected active 1080x2400 XR24 framebuffer, but no
+frame completion or visible output occurred. All attempted `/dev/mem` reads
+returned `raw=unavailable` because strict devmem rejected them.
+
+Vendor MT6873 `ddp_ovl.c` was rechecked from source SHA `5339a9bd...`.
+`ovl_start()` sets `HF_FOVL_CK_ON` bit 10, and `ovl_clock_on()` sets
+`OVL_READ_WRK` bit 20 and `OVL_BYPASS_SHADOW` bit 22. Patch 0042 preserves
+those bits when starting MT6873 OVL. Patch 0043 adds a one-shot, read-only
+kernel-side delayed snapshot for MMSYS, OVL, RDMA, DSI and mutex registers so
+V67 does not depend on `/dev/mem`.
 
 ## Pending
 
-- V66 register-state hardware diagnostics;
+- V67 compile validation and hardware register snapshot;
 - Stage C2b first-frame completion and visible-output validation;
 - full DRM component chain and routing;
 - MT6873 SMI traffic validation, LARB0 WRR handling and legacy IOMMU bank

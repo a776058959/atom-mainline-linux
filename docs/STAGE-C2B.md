@@ -307,4 +307,28 @@ captures:
 - read-only `/dev/mem` MMIO values when available.
 
 V66 passed all 59 assembly checks and the flash dry-run. Hardware diagnostics
-have not yet run.
+then ran successfully with a complete `ATOM-DIAG-V66` marker, three diagnostic
+snapshots and the expected controlled `sysrq` panic. The log directly showed:
+
+```text
+interrupt=309: 31 GICv3 297 Level 14010000.dsi
+interrupt=311: 1  GICv3 286 Level 14005000.ovl
+interrupt=312: 0  GICv3 287 Level 14006000.ovl
+interrupt=313: 0  GICv3 288 Level 14007000.rdma
+```
+
+DSI therefore transmitted the panel-initialization command traffic, while
+RDMA never reported frame completion. The DRM state contained an active
+1080x2400 XR24 framebuffer on plane 0 and an enabled/active CRTC, but three
+`vblank wait timed out` warnings occurred and no white output appeared.
+Strict devmem blocked every `/dev/mem` read, so V66 could not recover the
+controller register values.
+
+Vendor `ddp_ovl.c` from the MT6873 source snapshot shows two additional writes
+that the mainline path was clearing: `ovl_clock_on()` sets OVL `EN` bits 20
+and 22, while `ovl_start()` sets bit 10. Patch 0042 switches the MT6873 start
+write to read-modify-write and preserves those vendor-confirmed bits. Patch
+0043 adds a one-shot kernel-side snapshot after ten seconds, reading MMSYS,
+OVL0, RDMA0, DSI0 and mutex0 MMIO directly through `of_iomap()` without
+depending on `/dev/mem`. V67 must compile and run before either the bit change
+or the snapshot can be treated as validated.

@@ -200,6 +200,22 @@ diagnostic-only initramfs using the exact V65 kernel/DTB. It adds DSI/display
 IRQ evidence, DRM debugfs state, display-controller register dumps and optional
 read-only `/dev/mem` MMIO values.
 
+## Display Stage C2b V66
+
+V66 ran successfully on hardware with the exact V65 kernel and DTB. The
+diagnostic marker and all three snapshots completed, followed by the expected
+controlled panic. Direct log evidence showed 31 DSI interrupts and zero RDMA
+interrupts. The DRM framebuffer and CRTC state were active, but the white
+framebuffer update still produced three vblank timeouts and no visible frame.
+
+The initramfs could not read the display registers because strict devmem
+rejected `/dev/mem`; every reported MMIO value was `unavailable`. A source
+audit of vendor MT6873 `ddp_ovl.c` found that the mainline start path still
+clears `HF_FOVL_CK_ON` bit 10 and the `OVL_READ_WRK`/`OVL_BYPASS_SHADOW` bits
+20/22. Patch 0042 fixes that register update. Patch 0043 adds a temporary,
+read-only kernel-side register snapshot through `of_iomap()` so V67 can
+identify which part of the OVL -> RDMA -> DSI path stops progressing.
+
 ## Evidence discipline
 
 Historical test images intentionally ended in a controlled panic so pstore

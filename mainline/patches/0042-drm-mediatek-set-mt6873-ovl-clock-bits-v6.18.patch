@@ -1,0 +1,34 @@
+diff --git a/drivers/gpu/drm/mediatek/mtk_disp_ovl.c b/drivers/gpu/drm/mediatek/mtk_disp_ovl.c
+--- a/drivers/gpu/drm/mediatek/mtk_disp_ovl.c
++++ b/drivers/gpu/drm/mediatek/mtk_disp_ovl.c
+@@ -23,5 +23,9 @@
+ #define DISP_REG_OVL_INTEN			0x0004
+ #define OVL_FME_CPL_INT					BIT(1)
+ #define DISP_REG_OVL_INTSTA			0x0008
+ #define DISP_REG_OVL_EN				0x000c
++#define OVL_EN					BIT(0)
++#define OVL_HF_FOVL_CK_ON			BIT(10)
++#define OVL_READ_WRK				BIT(20)
++#define OVL_BYPASS_SHADOW			BIT(22)
+ #define DISP_REG_OVL_RST			0x0014
+@@ -260,13 +264,19 @@ void mtk_ovl_start(struct device *dev)
+ {
+ 	struct mtk_disp_ovl *ovl = dev_get_drvdata(dev);
++	unsigned int en;
+ 
+ 	if (ovl->data->smi_id_en) {
+ 		unsigned int reg;
+ 
+ 		reg = readl(ovl->regs + DISP_REG_OVL_DATAPATH_CON);
+ 		reg = reg | OVL_LAYER_SMI_ID_EN;
+ 		writel_relaxed(reg, ovl->regs + DISP_REG_OVL_DATAPATH_CON);
+ 	}
+-	writel_relaxed(0x1, ovl->regs + DISP_REG_OVL_EN);
++	en = readl(ovl->regs + DISP_REG_OVL_EN);
++	en |= OVL_EN;
++	if (ovl->data->mt6873_quirks)
++		en |= OVL_HF_FOVL_CK_ON | OVL_READ_WRK |
++		      OVL_BYPASS_SHADOW;
++	writel_relaxed(en, ovl->regs + DISP_REG_OVL_EN);
+ }
+ 
