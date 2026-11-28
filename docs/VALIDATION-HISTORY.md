@@ -232,6 +232,46 @@ same hash, and then matched the full recovery partition hash
 No reboot was performed. The next evidence must come from the V67 hardware run,
 not from this build or write-back result.
 
+## Display Stage C2b V67 hardware result
+
+V67 executed successfully and preserved a complete register log. MMSYS routing
+and the patch-0042 OVL enable bits were present:
+
+```text
+mmsys[0x0f04]=0x00000001
+ovl0[0x000c]=0x00500401
+ovl0[0x0038]=0x09600438
+ovl0[0x0044]=0x100010e0
+ovl0[0x0f40]=0xfe000000
+```
+
+The pipeline still did not complete. OVL `INTSTA=0x6025` reported abnormal SOF,
+RDMA0 EOF abnormal and frame underrun. RDMA `INT_STATUS=0x2f` reported frame,
+EOF, FIFO-underflow and target-line events, while RDMA IRQ 313 remained zero
+and DSI IRQ 309 remained 31. The mutex enabled the path with MOD0 bits 0 and 2.
+
+The exact Redmi 10X Android 11 source exposes missing real-time controls for
+OVL RDMA thresholds/FIFO/GREQ/buffers, LARB0 WRR ports 2 and 3, LARB throttle
+`0x370256`, and video-mode RDMA output threshold. Patches 0044-0047 implement
+those values and expand the next register snapshot. No visible output existed
+in V67, and IOMMU/SMI read completion remains unproven.
+
+## Display Stage C2b V68 build and flash
+
+V68 passed Linux v6.18.59 build run `46127177683`. It compiled the modified
+OVL, RDMA and SMI drivers plus the expanded MT6873 diagnostic unit. The
+resulting kernel SHA-256 is
+`5b402b001e74c738ae3d123802ca9f7b3f999f228b423a60f75feee79a2c01dd`;
+the DTB remained unchanged.
+
+The recovery-only image passed all 59 assembly checks with SHA-256
+`bb2b8c42787ee42afb8897454a46c0ebdbc0a7e98754aceff056ebfeb74716e8`.
+Only recovery was written. Readback matched the image, and the full partition
+hash after writing is
+`627629d69b6d6c7c9e3910a568ed7aeafc6fb1fbe4f781c937473cb127491019`.
+No reboot was performed. Functional effect remains unverified until the V68
+recovery run completes.
+
 ## Evidence discipline
 
 Historical test images intentionally ended in a controlled panic so pstore

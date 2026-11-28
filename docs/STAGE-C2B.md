@@ -348,4 +348,46 @@ Only the recovery partition was written. A bounded readback matched the image
 byte-for-byte, and the full recovery partition hash after the write was
 `6d1a73bc6d682df53e9cd4bd94a00fe024bd306a658e7bc56744240c6e07696d`.
 The device remained in Android and was not rebooted. The OVL bits and kernel
-register snapshot have not yet been validated on hardware.
+register snapshot were validated next by running V67 on hardware.
+
+## V67 hardware result
+
+V67 proved that the MMSYS OVL-to-RDMA routes, OVL enable bits, layer geometry,
+pitch, framebuffer IOVA and mutex modules reached hardware. `ovl0[0x0c]` was
+`0x00500401`, so the previously missing bits 10, 20 and 22 were preserved.
+
+The data path still failed before completed output. OVL interrupt status
+`0x6025` set `ABNORMAL_SOF`, `RDMA0_EOF_ABNORMAL` and `FME_UND`. RDMA status
+`0x2f` set frame, abnormal EOF, FIFO-underflow and target-line flags. RDMA IRQ
+313 remained zero, and DSI IRQ 309 remained at 31 after the video-mode setup.
+
+Source comparison against the exact Redmi 10X Android 11 kernel identified
+unported real-time settings:
+
+- OVL RDMA GMC threshold, 384-entry FIFO, issue thresholds, GREQ counts, buffer
+  thresholds and DCM registers;
+- LARB0 WRR port 2/3 values of `0x7`;
+- LARB throttle value `0x370256`;
+- zero output-valid FIFO threshold for video-mode RDMA.
+
+Patches 0044-0047 add those settings and extend the kernel register dump to
+cover the OVL read path, SMI common, LARB0 and IOMMU. V68 tests this combined
+change set without altering DSI timing or panel power sequences.
+
+## V68 build and flash
+
+V68 passed Build Mainline run `46127177683`. The compiled objects include
+`mtk_disp_ovl.o`, `mtk_disp_rdma.o`, `mtk-smi.o` and
+`mtk_mt6873_diag.o`, with no compiler warning/error gate failure.
+
+```text
+Image.gz sha256  5b402b001e74c738ae3d123802ca9f7b3f999f228b423a60f75feee79a2c01dd
+DTB sha256       f041bf87b0b7b9df72be2e00b274c184b19eb7ea4625b5f0211f7ddd2288d665
+image sha256     bb2b8c42787ee42afb8897454a46c0ebdbc0a7e98754aceff056ebfeb74716e8
+```
+
+The image passed all 59 assembly checks. Only the recovery partition was
+written; readback matched `bb2b8c...16e8`, and the full partition hash is
+`627629d69b6d6c7c9e3910a568ed7aeafc6fb1fbe4f781c937473cb127491019`.
+The device remained in Android. The new real-time settings and underflow
+behavior have not yet been observed in a V68 hardware run.

@@ -37,9 +37,14 @@ read-only hardware-test fixtures.
   DSI IRQ count to 31, while RDMA IRQ remained zero, and the framebuffer write
   still timed out waiting for vblank. The `/dev/mem` MMIO reads were blocked by
   strict devmem, so patches 0042/0043 now set the vendor-confirmed MT6873 OVL
-  clock bits and add a read-only kernel-side register snapshot. V67 built
-  successfully and its recovery-only image was written and read back
-  byte-for-byte; hardware execution awaits a manual recovery boot.
+  clock bits and add a read-only kernel-side register snapshot. V67 confirmed
+  those bits and the MMSYS routes in hardware, but OVL reported abnormal SOF
+  and frame underrun while RDMA reported FIFO underflow and still generated no
+  IRQ. Patches 0044-0047 now port the vendor real-time OVL read thresholds,
+  LARB0 WRR values, zero video-mode RDMA threshold and expanded SMI/IOMMU
+  diagnostics. V68 built successfully and its recovery-only image was written
+  and read back byte-for-byte; hardware execution awaits a manual recovery
+  boot.
 
 See [docs/STATUS.md](docs/STATUS.md) for completed and pending work, and
 [docs/VALIDATION-HISTORY.md](docs/VALIDATION-HISTORY.md) for evidence limits.

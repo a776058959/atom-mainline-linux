@@ -392,9 +392,48 @@ recovery readback sha256 2bd407c97bb8c3a872fed2b12c51b49f2ac01d1e9f250a34240eefc
 The phone remained in Android and was not rebooted. Hardware execution and
 register interpretation are still pending.
 
+V67 then ran successfully on hardware. The direct register evidence showed:
+
+```text
+mmsys[0x0f04]=0x00000001
+ovl0[0x000c]=0x00500401
+ovl0[0x0038]=0x09600438
+ovl0[0x0044]=0x100010e0
+ovl0[0x0f40]=0xfe000000
+ovl0[0x0008]=0x00006025
+rdma0[0x0004]=0x0000002f
+mutex0[0x0030]=0x00000005
+```
+
+The MMSYS route, OVL enable bits, 1080x2400 layer geometry, pitch, address and
+mutex module bits were programmed. OVL status still set `ABNORMAL_SOF`,
+`RDMA0_EOF_ABNORMAL` and `FME_UND`; RDMA status set frame/EOF/underflow flags,
+while RDMA IRQ 313 remained zero and DSI IRQ 309 remained at 31.
+
+The target Xiaomi Android 11 source shows that upstream lacks several
+MT6873 real-time read-path settings. V68 adds the vendor OVL GMC/FIFO/GREQ and
+buffer values, LARB0 WRR values `0x7` for ports 2 and 3, LARB throttle
+`0x370256`, zero video-mode RDMA output threshold, and additional SMI/IOMMU
+register diagnostics.
+
+V68 passed clean Linux `v6.18.59` build run `46127177683`:
+
+```text
+Image.gz sha256  5b402b001e74c738ae3d123802ca9f7b3f999f228b423a60f75feee79a2c01dd
+DTB sha256       f041bf87b0b7b9df72be2e00b274c184b19eb7ea4625b5f0211f7ddd2288d665
+image sha256     bb2b8c42787ee42afb8897454a46c0ebdbc0a7e98754aceff056ebfeb74716e8
+```
+
+The build compiled `mtk_disp_ovl.o`, `mtk_disp_rdma.o`, `mtk-smi.o` and
+`mtk_mt6873_diag.o`. The recovery-only image passed all 59 assembly checks and
+was written only to recovery. Readback matched the image hash; the V68 recovery
+partition hash is
+`627629d69b6d6c7c9e3910a568ed7aeafc6fb1fbe4f781c937473cb127491019`.
+The phone remained in Android and was not rebooted.
+
 ## Pending
 
-- V67 manual recovery boot and hardware register snapshot;
+- V68 manual recovery boot and hardware validation;
 - Stage C2b first-frame completion and visible-output validation;
 - full DRM component chain and routing;
 - MT6873 SMI traffic validation, LARB0 WRR handling and legacy IOMMU bank
