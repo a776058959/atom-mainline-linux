@@ -1,7 +1,7 @@
 diff --git a/drivers/gpu/drm/panel/Kconfig b/drivers/gpu/drm/panel/Kconfig
 --- a/drivers/gpu/drm/panel/Kconfig
 +++ b/drivers/gpu/drm/panel/Kconfig
-@@ -726,6 +726,7 @@ config DRM_PANEL_SAMSUNG_S6E8FC01
+@@ -726,5 +726,6 @@ config DRM_PANEL_SAMSUNG_S6E8FC01
  	tristate "Samsung S6E8FC01 AMOLED DSI video-mode panel"
  	depends on GPIOLIB && OF && REGULATOR
 +	depends on BACKLIGHT_CLASS_DEVICE
