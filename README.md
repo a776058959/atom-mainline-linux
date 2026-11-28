@@ -37,7 +37,9 @@ read-only hardware-test fixtures.
   DSI IRQ count to 31, while RDMA IRQ remained zero, and the framebuffer write
   still timed out waiting for vblank. The `/dev/mem` MMIO reads were blocked by
   strict devmem, so patches 0042/0043 now set the vendor-confirmed MT6873 OVL
-  clock bits and add a read-only kernel-side register snapshot for V67.
+  clock bits and add a read-only kernel-side register snapshot. V67 built
+  successfully and its recovery-only image was written and read back
+  byte-for-byte; hardware execution awaits a manual recovery boot.
 
 See [docs/STATUS.md](docs/STATUS.md) for completed and pending work, and
 [docs/VALIDATION-HISTORY.md](docs/VALIDATION-HISTORY.md) for evidence limits.

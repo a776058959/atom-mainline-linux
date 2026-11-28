@@ -371,9 +371,30 @@ those bits when starting MT6873 OVL. Patch 0043 adds a one-shot, read-only
 kernel-side delayed snapshot for MMSYS, OVL, RDMA, DSI and mutex registers so
 V67 does not depend on `/dev/mem`.
 
+V67 then passed a clean `v6.18.59` build:
+
+```text
+Build Mainline run  46122277644  success
+Image.gz sha256     1e091bfccdc20f1e39d8114e761d5b1b1effe41d869580b6b7487cff04fbab92
+DTB sha256          f041bf87b0b7b9df72be2e00b274c184b19eb7ea4625b5f0211f7ddd2288d665
+```
+
+The build log compiled `mtk_mt6873_diag.o` and contained no compiler
+warning/error gate failure. The recovery-only image passed all 59 assembly
+checks. It was written to the recovery partition and read back with matching
+size and SHA-256:
+
+```text
+image sha256             2bd407c97bb8c3a872fed2b12c51b49f2ac01d1e9f250a34240eefc2b828eb11
+recovery readback sha256 2bd407c97bb8c3a872fed2b12c51b49f2ac01d1e9f250a34240eefc2b828eb11
+```
+
+The phone remained in Android and was not rebooted. Hardware execution and
+register interpretation are still pending.
+
 ## Pending
 
-- V67 compile validation and hardware register snapshot;
+- V67 manual recovery boot and hardware register snapshot;
 - Stage C2b first-frame completion and visible-output validation;
 - full DRM component chain and routing;
 - MT6873 SMI traffic validation, LARB0 WRR handling and legacy IOMMU bank

@@ -216,6 +216,22 @@ clears `HF_FOVL_CK_ON` bit 10 and the `OVL_READ_WRK`/`OVL_BYPASS_SHADOW` bits
 read-only kernel-side register snapshot through `of_iomap()` so V67 can
 identify which part of the OVL -> RDMA -> DSI path stops progressing.
 
+## Display Stage C2b V67 build and flash
+
+V67 passed clean Linux v6.18.59 build run `46122277644`. The new diagnostic
+translation unit and the updated MT6873 OVL path compiled under the workflow's
+warning/error gate. The resulting `Image.gz` SHA-256 is
+`1e091bfccdc20f1e39d8114e761d5b1b1effe41d869580b6b7487cff04fbab92`;
+the DTB is unchanged.
+
+The recovery-only image passed all 59 assembly checks and has SHA-256
+`2bd407c97bb8c3a872fed2b12c51b49f2ac01d1e9f250a34240eefc2b828eb11`.
+The flash tool wrote only the recovery partition, read the image back with the
+same hash, and then matched the full recovery partition hash
+`6d1a73bc6d682df53e9cd4bd94a00fe024bd306a658e7bc56744240c6e07696d`.
+No reboot was performed. The next evidence must come from the V67 hardware run,
+not from this build or write-back result.
+
 ## Evidence discipline
 
 Historical test images intentionally ended in a controlled panic so pstore

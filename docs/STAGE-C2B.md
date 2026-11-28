@@ -332,3 +332,20 @@ write to read-modify-write and preserves those vendor-confirmed bits. Patch
 OVL0, RDMA0, DSI0 and mutex0 MMIO directly through `of_iomap()` without
 depending on `/dev/mem`. V67 must compile and run before either the bit change
 or the snapshot can be treated as validated.
+
+## V67 build and flash
+
+V67 passed clean-tree build run `46122277644`. The compiler built
+`mtk_mt6873_diag.o`, and the workflow's warning/error gate passed. The kernel
+hash is
+`1e091bfccdc20f1e39d8114e761d5b1b1effe41d869580b6b7487cff04fbab92`;
+the DTB remains unchanged at
+`f041bf87b0b7b9df72be2e00b274c184b19eb7ea4625b5f0211f7ddd2288d665`.
+
+The V67 recovery-only image passed all 59 assembly checks with SHA-256
+`2bd407c97bb8c3a872fed2b12c51b49f2ac01d1e9f250a34240eefc2b828eb11`.
+Only the recovery partition was written. A bounded readback matched the image
+byte-for-byte, and the full recovery partition hash after the write was
+`6d1a73bc6d682df53e9cd4bd94a00fe024bd306a658e7bc56744240c6e07696d`.
+The device remained in Android and was not rebooted. The OVL bits and kernel
+register snapshot have not yet been validated on hardware.
