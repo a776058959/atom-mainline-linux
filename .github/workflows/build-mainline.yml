@@ -1,12 +1,7 @@
-name: Build Mainline
+name: Build DRM Long Stress Probe
 
 on:
   workflow_dispatch:
-    inputs:
-      linux_ref:
-        description: Linux stable tag
-        required: true
-        default: v6.18.59
 
 permissions:
   contents: read
@@ -14,84 +9,61 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install cross compiler and dependencies
+      - name: Install cross compiler
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq \
-            gcc-aarch64-linux-gnu bc bison flex libssl-dev libelf-dev \
-            device-tree-compiler
+          sudo apt-get install -y -qq gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
 
-      - name: Fetch Linux
+      - name: Build freestanding aarch64 probe
         run: |
-          git clone --depth 1 --branch "${{ inputs.linux_ref }}" \
-            https://github.com/gregkh/linux.git linux
-          git -C linux log -1 --oneline
-
-      - name: Apply MT6873 patches
-        run: |
-          for patch in mainline/patches/*.patch; do
-            git -C linux apply "$GITHUB_WORKSPACE/$patch"
-          done
-          git -C linux diff --check
-
-      - name: Install formal DTS
-        run: |
-          cp mainline/mt6873-atom-usb.dts \
-            linux/arch/arm64/boot/dts/mediatek/mt6873-atom-usb.dts
-          cd linux/arch/arm64/boot/dts/mediatek
-          grep -q 'mt6873-atom-usb.dtb' Makefile ||
-            echo 'dtb-$(CONFIG_ARCH_MEDIATEK) += mt6873-atom-usb.dtb' >> Makefile
-          grep -q 'DTC_FLAGS_mt6873-atom-usb' Makefile ||
-            echo 'DTC_FLAGS_mt6873-atom-usb := -@' >> Makefile
-
-      - name: Configure kernel
-        run: |
-          cd linux
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
-          scripts/kconfig/merge_config.sh -m .config \
-            "$GITHUB_WORKSPACE/mainline/configs/atom-ufs-drivers.config"
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
-          grep -q '^CONFIG_COMMON_CLK_MT6873=y$' .config
-          grep -q '^CONFIG_DRM_MEDIATEK=y$' .config
-          grep -q '^CONFIG_BACKLIGHT_CLASS_DEVICE=y$' .config
-          grep -q '^CONFIG_DRM_PANEL_SAMSUNG_S6E8FC01=y$' .config
-          grep -q '^CONFIG_SCSI_UFS_MEDIATEK=y$' .config
-          grep -q '^CONFIG_MTK_SMI=y$' .config
-          grep -q '^CONFIG_MTK_IOMMU=y$' .config
-          grep -q '^CONFIG_PSTORE_CONSOLE=y$' .config
-          grep -q '^CONFIG_PSTORE_PMSG=y$' .config
-          grep -q '^CONFIG_PSTORE_RAM=y$' .config
-
-      - name: Build Image.gz and atom DTB
-        run: |
-          set -o pipefail
-          make -C linux -j"$(nproc)" \
-            ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
-            Image.gz mediatek/mt6873-atom-usb.dtb \
-            2>&1 | tee build-mainline.log
-          if grep -Eiq '(^|: )(warning|error):' build-mainline.log; then
-            echo '[FATAL] compiler warning or error found'
-            exit 1
-          fi
-
-      - name: Record hashes
-        run: |
+          set -eux
+          mkdir -p out
+          aarch64-linux-gnu-gcc \
+            -nostdlib -static -no-pie -ffreestanding \
+            -fno-builtin -fno-stack-protector \
+            -fno-unwind-tables -fno-asynchronous-unwind-tables \
+            -O2 -Wall -Wextra -Werror \
+            -Wl,-e,_start -Wl,--build-id=none \
+            -o out/drmflip tools/drmflip.c
+          aarch64-linux-gnu-gcc \
+            -nostdlib -static -no-pie -ffreestanding \
+            -fno-builtin -fno-stack-protector \
+            -fno-unwind-tables -fno-asynchronous-unwind-tables \
+            -O2 -Wall -Wextra -Werror \
+            -DDRMFLIP_STRESS_FLIP_COUNT=600 \
+            -Wl,-e,_start -Wl,--build-id=none \
+            -o out/drmflip-stress tools/drmflip.c
+          aarch64-linux-gnu-gcc \
+            -nostdlib -static -no-pie -ffreestanding \
+            -fno-builtin -fno-stack-protector \
+            -fno-unwind-tables -fno-asynchronous-unwind-tables \
+            -O2 -Wall -Wextra -Werror \
+            -DDRMFLIP_STRESS_FLIP_COUNT=12000 \
+            -DDRMFLIP_STRESS_LOG_INTERVAL=600 \
+            -DDRMFLIP_STRESS_FRAMES_PER_COLOR=1200 \
+            -DDRMFLIP_STRESS_CHURN_EVERY=1000 \
+            -DDRMFLIP_STRESS_CHURN_BUFFERS=4 \
+            -Wl,-e,_start -Wl,--build-id=none \
+            -o out/drmflip-longstress tools/drmflip.c
+          file out/drmflip
+          file out/drmflip-stress
+          file out/drmflip-longstress
+          readelf -h out/drmflip
+          readelf -l out/drmflip
           sha256sum \
-            linux/arch/arm64/boot/Image.gz \
-            linux/arch/arm64/boot/dts/mediatek/mt6873-atom-usb.dtb \
-            > build-outputs.sha256
-          cat build-outputs.sha256
+            out/drmflip out/drmflip-stress out/drmflip-longstress |
+            tee out/drmflip.sha256
 
-      - name: Upload build outputs
+      - name: Upload probe
         uses: actions/upload-artifact@v4
         with:
-          name: atom-mainline-${{ github.run_id }}
+          name: drmflip-aarch64
           path: |
-            build-mainline.log
-            build-outputs.sha256
-            linux/arch/arm64/boot/Image.gz
-            linux/arch/arm64/boot/dts/mediatek/mt6873-atom-usb.dtb
+            out/drmflip
+            out/drmflip-stress
+            out/drmflip-longstress
+            out/drmflip.sha256
